@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Journal Entries</title>
+</head>
+<body>
+    <h1>All Journal Entries</h1>
+
+    {% if journals %}
+        {% for journal in journals %}
+            <div style="margin-bottom:15px; padding:10px; border:1px solid #ccc;">
+                <strong>Date:</strong> {{ journal.date }}<br>
+                <strong>Mood Score:</strong> {{ journal.mood_score }}<br>
+                <strong>Entry:</strong> {{ journal.journal_entry }}
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No journal entries found.</p>
+    {% endif %}
+
+    <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+    <a href="{{ url_for('home') }}">View Homepage</a>
+</body>
+</html>

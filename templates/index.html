@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mental Health Tracker</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        input, textarea, select { width: 100%; padding: 8px; }
+        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div style="padding:10px; background:#d4edda; color:#155724; margin-bottom:15px;">
+         {{ messages[0] }}
+        </div>
+    {% endif %}
+    {% endwith %}
+    <h1>Mental Health Tracker</h1>
+    <form action="/log" method="POST">
+        <div class="form-group">
+            <label>Mood (1-10): <input type="number" name="mood" min="1" max="10" required></label>
+        </div>
+        <div class="form-group">
+            <label>Journal Entry: <textarea name="journal" rows="4" required></textarea></label>
+        </div>
+        <div class="form-group">
+            <label>Sleep Hours: <input type="number" name="sleep" step="0.1" required></label>
+        </div>
+        <div class="form-group">
+            <label>Activity Level (1-5): <input type="number" name="activity" min="1" max="5" required></label>
+        </div>
+        <div class="form-group">
+            <label>Social Interactions: <input type="number" name="social" required></label>
+        </div>
+        <button type="submit">Submit</button>
+    </form>
+    <div style="margin-top: 20px;">
+        <a href="{{ url_for('dashboard') }}">View Dashboard</a> |
+        <a href="{{ url_for('journals') }}">View Journal Entries</a>
+    </div>
+</body>
+</html>
