@@ -230,6 +230,6 @@ def journals():
         #    response = chat_response(user_input)
         #return f'<div id="bot-response">{response}</div>'
     #return render_template('chat.html', response=response, user_input=user_input)
-
+init_db()
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
