@@ -91,6 +91,7 @@
     window.rollingValues = {{ analysis.rolling_values | tojson }};
     window.sleepValues = {{ analysis.sleep_values | tojson }};
     window.moodValuesScatter = {{ analysis.mood_values_scatter | tojson }};
+    window.stabilityValues = {{ analysis.stability_values | tojson }}; 
 </script>
 <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
     

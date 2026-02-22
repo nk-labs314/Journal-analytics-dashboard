@@ -246,6 +246,40 @@ def dashboard():
     dates = df_mood['date'].dt.strftime('%Y-%m-%d').tolist()
     mood_values = df_mood['mood_score'].tolist()
     rolling_values = df_mood['rolling_7'].tolist()
+    # Rolling standard deviation (7-day window)
+    df_mood_daily['rolling_std'] = df_mood_daily['mood_score'].rolling(7).std()
+
+    min_std = df_mood_daily['rolling_std'].min()
+    max_std = df_mood_daily['rolling_std'].max()
+
+    if pd.notna(min_std) and pd.notna(max_std) and max_std != min_std:
+        df_mood_daily['normalized_volatility'] = (
+            (df_mood_daily['rolling_std'] - min_std) / (max_std - min_std)
+        )
+    else:
+        df_mood_daily['normalized_volatility'] = 0
+
+    df_mood_daily['stability_index'] = 1 - df_mood_daily['normalized_volatility']
+    stability_values = df_mood_daily['stability_index'].tolist()
+    if not df_mood_daily.empty:
+        current_stability = round(
+            df_mood_daily['stability_index'].iloc[-1], 3
+        )
+        avg_stability = round(
+            df_mood_daily['stability_index'].mean(), 3
+        )
+    else:
+        current_stability = None
+        avg_stability = None
+
+    print("Rolling STD:")
+    print(df_mood_daily['rolling_std'])
+
+    print("Min STD:", min_std)
+    print("Max STD:", max_std)
+
+    print("Stability Index:")
+    print(df_mood_daily['stability_index'])
 
     analysis = {
         'sentiment': avg_sentiment,
@@ -262,7 +296,10 @@ def dashboard():
         'mood_values': mood_values,
         'rolling_values': rolling_values,
         'sleep_values': sleep_values,
-        'mood_values_scatter': mood_values_scatter
+        'mood_values_scatter': mood_values_scatter,
+        'stability_values': stability_values,
+        'current_stability': current_stability,
+        'avg_stability': avg_stability
     }
     conn.close()
     
