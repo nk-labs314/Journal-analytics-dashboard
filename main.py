@@ -1,3 +1,4 @@
+from statistics import correlation
 import sys
 import os
 import sqlite3
@@ -50,9 +51,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-if __name__ == "__main__":
-    init_db()
-    print("Database initialized successfully!")
+
 
 vader_analyzer = SentimentIntensityAnalyzer()
 
@@ -145,6 +144,20 @@ def log_entry():
     conn.close()
     flash("Entry saved successfully!")
     return redirect(url_for('home'))
+def interpret_correlation(corr):
+    magnitude = abs(corr)
+
+    if magnitude >= 0.6:
+        strength = "Strong"
+    elif magnitude >= 0.3:
+        strength = "Moderate"
+    elif magnitude > 0:
+        strength = "Weak"
+    else:
+        return "No significant relationship"
+
+    direction = "positive" if corr > 0 else "negative"
+    return f"{strength} {direction} relationship"
 
 @app.route('/dashboard')
 def dashboard():
@@ -164,8 +177,33 @@ def dashboard():
         conn, 
         params=(user_id, '2023-01-01')
     )
+   # Aggregate to daily level first
+    df_mood_daily = df_mood.groupby('date', as_index=False)['mood_score'].mean()
+    df_behavior_daily = df_behavior.groupby('date', as_index=False)['sleep_hours'].mean()
+
+    # Merge daily aggregates
+    df_combined = pd.merge(
+        df_mood_daily,
+        df_behavior_daily,
+        on='date',
+        how='inner'
+    )
+    # Scatter plot data (daily aggregated)
+    if len(df_combined) > 0:
+        sleep_values = df_combined['sleep_hours'].tolist()
+        mood_values_scatter = df_combined['mood_score'].tolist()
+    else:
+        sleep_values = []
+        mood_values_scatter = []
+    
     avg_mood_7d = df_mood['mood_score'].mean() if not df_mood.empty else 0
     mood_volatility = df_mood['mood_score'].std() if not df_mood.empty else 0
+    if mood_volatility < 1:
+        volatility_label = "Stable"
+    elif mood_volatility < 2:
+        volatility_label = "Moderate variability"
+    else:
+        volatility_label = "High variability"
     avg_sleep = df_behavior['sleep_hours'].mean() if not df_behavior.empty else 0
 
     
@@ -174,6 +212,16 @@ def dashboard():
         conn, 
         params=(user_id, '2023-01-01')
     )
+    # Ensure required columns exist
+    if (
+    len(df_combined) > 1
+    and 'mood_score' in df_combined.columns
+    and 'sleep_hours' in df_combined.columns
+    ):
+        correlation = df_combined[['mood_score', 'sleep_hours']].corr().iloc[0, 1]
+    else:
+        correlation = 0
+    correlation_label = interpret_correlation(correlation)
 
     if not df_all_journals.empty:
         sentiments = df_all_journals['journal_entry'].apply(lambda x: analyze_sentiment(x))
@@ -191,16 +239,31 @@ def dashboard():
 
     alerts = analyze_behavior(user_id)
 
+    df_mood['date'] = pd.to_datetime(df_mood['date'], errors='coerce')
+    df_mood = df_mood.sort_values('date')
+    df_mood['rolling_7'] = df_mood['mood_score'].rolling(window=7).mean()
+
+    dates = df_mood['date'].dt.strftime('%Y-%m-%d').tolist()
+    mood_values = df_mood['mood_score'].tolist()
+    rolling_values = df_mood['rolling_7'].tolist()
+
     analysis = {
         'sentiment': avg_sentiment,
         'mood_trend': mood_trend,
         'alerts': alerts,
         'journals': df_journals.to_dict(orient='records'),
         'avg_mood_7d': round(avg_mood_7d, 2),
-        'mood_volatility': round(mood_volatility, 2) if mood_volatility else 0,
-        'avg_sleep': round(avg_sleep, 2)
+        'volatility_label': volatility_label,
+        'mood_volatility': round(mood_volatility, 2),
+        'avg_sleep': round(avg_sleep, 2),
+        'correlation': round(correlation, 2),
+        'correlation_label': correlation_label,
+        'mood_dates': dates,
+        'mood_values': mood_values,
+        'rolling_values': rolling_values,
+        'sleep_values': sleep_values,
+        'mood_values_scatter': mood_values_scatter
     }
-
     conn.close()
     
     return render_template('dashboard.html', analysis=analysis)

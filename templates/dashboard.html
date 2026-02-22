@@ -13,7 +13,20 @@
       border: 1px solid #ccc;
       border-radius: 6px;
     }
+    .charts-container {
+    display: flex;
+    gap: 30px;
+    margin-top: 40px;
+    flex-wrap: wrap;
+}
+
+.chart-box {
+    flex: 1;
+    min-width: 400px;
+    height: 400px;
+}
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <h1>Health Dashboard</h1>
@@ -38,6 +51,21 @@
     <div class="metric-card">
         <h3>Mood Trend: {{ analysis.mood_trend }}</h3>
     </div>
+    <div class="metric-card">
+    <h3>
+        Mood Volatility: 
+        {{ analysis.mood_volatility }} 
+        ({{ analysis.volatility_label }})
+    </h3>
+</div>
+
+<div class="metric-card">
+    <h3>
+        Mood vs Sleep Correlation:
+        {{ analysis.correlation }}
+        ({{ analysis.correlation_label }})
+    </h3>
+</div>
     {% if analysis.alerts %}
     <div class="metric-card alert">
         <h3>Alerts:</h3>
@@ -48,6 +76,23 @@
         </ul>
     </div>
     {% endif %}
+<div class="charts-container">
+    <div class="chart-box">
+        <canvas id="moodChart"></canvas>
+    </div>
+
+    <div class="chart-box">
+        <canvas id="scatterChart"></canvas>
+    </div>
+</div>
+<script>
+    window.moodDates = {{ analysis.mood_dates | tojson }};
+    window.moodValues = {{ analysis.mood_values | tojson }};
+    window.rollingValues = {{ analysis.rolling_values | tojson }};
+    window.sleepValues = {{ analysis.sleep_values | tojson }};
+    window.moodValuesScatter = {{ analysis.mood_values_scatter | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
     
     <a href="{{ url_for('journals') }}">View Journal Entries</a>
     <a href="{{ url_for('home') }}">Back Home</a>
