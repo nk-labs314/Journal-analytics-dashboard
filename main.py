@@ -166,14 +166,14 @@ def dashboard():
     
     
     df_mood = pd.read_sql(
-        'SELECT * FROM MoodLogs WHERE user_id=? AND date != ? ORDER BY date DESC LIMIT 7', 
+        'SELECT * FROM MoodLogs WHERE user_id=? AND date != ? ORDER BY date DESC LIMIT 30', 
         conn, 
         params=(user_id, '2023-01-01')
     )
     
     
     df_behavior = pd.read_sql(
-        'SELECT * FROM BehaviorData WHERE user_id=? AND date != ? ORDER BY date DESC LIMIT 7', 
+        'SELECT * FROM BehaviorData WHERE user_id=? AND date != ? ORDER BY date DESC LIMIT 30', 
         conn, 
         params=(user_id, '2023-01-01')
     )
@@ -272,14 +272,60 @@ def dashboard():
         current_stability = None
         avg_stability = None
 
-    print("Rolling STD:")
-    print(df_mood_daily['rolling_std'])
+    # --- Trend Classification ---
 
-    print("Min STD:", min_std)
-    print("Max STD:", max_std)
+    trend_label = "Insufficient Data"
 
-    print("Stability Index:")
-    print(df_mood_daily['stability_index'])
+    # Use last 5 rolling mean values (drop NaNs)
+    recent_values = df_mood['rolling_7'].dropna().tail(5)
+
+    if len(recent_values) >= 2:
+        x = np.arange(len(recent_values))
+        y = recent_values.values
+
+        slope, _ = np.polyfit(x, y, 1)
+
+        if slope > 0.1:
+            trend_label = "Improving"
+        elif slope < -0.1:
+            trend_label = "Declining"
+        else:
+            trend_label = "Stable"
+
+    def generate_summary(trend_label, current_stability, volatility_label, correlation_label):
+
+        trend_map = {
+            "Improving": "Your mood has been improving recently.",
+            "Declining": "Your mood has been declining recently.",
+            "Stable": "Your mood has been relatively stable.",
+            "Insufficient Data": "There is not enough data to determine a clear mood trend."
+        }
+
+        trend_text = trend_map.get(
+            trend_label,
+            "Mood trend could not be determined."
+        )
+
+        if current_stability is None:
+            stability_text = "Stability could not be determined."
+        else:
+            stability_text = (
+                "Emotional stability is high." if current_stability > 0.7
+                else "Emotional stability is moderate." if current_stability > 0.4
+                else "Emotional stability is low."
+            )
+
+        correlation_text = f"Sleep and mood relationship is {correlation_label.lower()}."
+
+        return f"{trend_text} {stability_text} {correlation_text}"
+    
+    summary_text = generate_summary(
+        trend_label,
+        current_stability,
+        volatility_label,
+        correlation_label
+    )
+
 
     analysis = {
         'sentiment': avg_sentiment,
@@ -299,8 +345,11 @@ def dashboard():
         'mood_values_scatter': mood_values_scatter,
         'stability_values': stability_values,
         'current_stability': current_stability,
-        'avg_stability': avg_stability
+        'avg_stability': avg_stability,
+        'summary_text': summary_text,
+        'trend_label': trend_label
     }
+
     conn.close()
     
     return render_template('dashboard.html', analysis=analysis)
