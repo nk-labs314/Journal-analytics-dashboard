@@ -13,18 +13,23 @@ HORIZONS = [3, 7, 14]
 # 1️⃣ Feature Construction
 # --------------------------------------------------
 
-def build_features(df):
+def build_features(df, cycle_period=60):
     df = df.copy()
 
-    # Lag features
+    # ----- Lag Features -----
     df["lag_1"] = df["mood_score"].shift(1)
     df["lag_2"] = df["mood_score"].shift(2)
 
-    # Rolling 7 mean (uses only past values)
+    # ----- Rolling Features -----
+    df["rolling_3"] = df["mood_score"].rolling(window=3).mean()
     df["rolling_7"] = df["mood_score"].rolling(window=7).mean()
+    df["rolling_14"] = df["mood_score"].rolling(window=14).mean()
+
+    # ----- Seasonal (Time-Based) Features -----
+    df["sin_time"] = np.sin(2 * np.pi * df["entry_index"] / cycle_period)
+    df["cos_time"] = np.cos(2 * np.pi * df["entry_index"] / cycle_period)
 
     return df
-
 
 # --------------------------------------------------
 # 2️⃣ Target Construction
@@ -60,7 +65,12 @@ def train_multi_horizon_forecast(df, train_ratio=0.8):
         # Drop rows with NaNs (lag + rolling + future target)
         df_h = df_h.dropna().reset_index(drop=True)
 
-        feature_cols = ["lag_1", "lag_2", "rolling_7"]
+        feature_cols = ["lag_1", 
+                        "lag_2", "rolling_3", 
+                        "rolling_7", 
+                        "rolling_14",
+                        "sin_time",
+                        "cos_time"]
         target_col = f"target_{horizon}"
 
         X = df_h[feature_cols]
