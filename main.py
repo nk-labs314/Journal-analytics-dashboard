@@ -367,6 +367,8 @@ def journals():
     return render_template('journals.html', journals=df_journals.to_dict(orient='records'))
 
 
+
+
 #@app.route('/chat', methods=['GET', 'POST'])
 #def chat():
  #   response = None
@@ -381,4 +383,5 @@ def journals():
     #return render_template('chat.html', response=response, user_input=user_input)
 init_db()
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True)
+
