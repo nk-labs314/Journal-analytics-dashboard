@@ -12,6 +12,8 @@ from datetime import date
 from flask import Flask, flash, render_template, request, redirect, url_for
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
+from services import data_service
+
 
 sys.path.append(os.path.join(os.getcwd(), "Mental-health-Chatbot"))
 Default_User_Id = 1
@@ -130,20 +132,23 @@ def log_entry():
         'activity': int(request.form['activity']),
         'social': int(request.form['social'])
     }
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO MoodLogs (user_id, mood_score, date, journal_entry)
-        VALUES (?, ?, ?, ?)
-    ''', (user_id, data['mood'], date.today().isoformat(), data['journal']))
-    cursor.execute('''
-        INSERT INTO BehaviorData (user_id, sleep_hours, activity_level, social_interactions, date)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (user_id, data['sleep'], data['activity'], data['social'], date.today().isoformat()))
-    conn.commit()
-    conn.close()
+    data_service.insert_mood_log(
+        user_id,
+        data['mood'],
+        data['journal']
+    )
+
+    data_service.insert_behavior_log(
+        user_id,
+        data['sleep'],
+        data['activity'],
+        data['social']
+    )
+
     flash("Entry saved successfully!")
     return redirect(url_for('home'))
+
+
 def interpret_correlation(corr):
     magnitude = abs(corr)
 
