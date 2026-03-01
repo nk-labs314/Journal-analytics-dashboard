@@ -1,37 +1,17 @@
-import sqlite3
+from sqlalchemy import create_engine, text
 import pandas as pd
-import psycopg2
-from urllib.parse import urlparse
 from datetime import date
-import os
 from config import Config
 
-def is_sqlite():
-    return Config.DATABASE_URL.startswith("sqlite:///")
+
+_engine = None
 
 
-def get_placeholder():
-    return "?" if is_sqlite() else "%s"
-
-def get_connection():
-    db_url = Config.DATABASE_URL
-
-    if db_url.startswith("sqlite:///"):
-        db_path = db_url.replace("sqlite:///", "")
-        return sqlite3.connect(db_path)
-
-    if db_url.startswith("postgres://") or db_url.startswith("postgresql://"):
-        result = urlparse(db_url)
-
-        return psycopg2.connect(
-            database=result.path[1:],
-            user=result.username,
-            password=result.password,
-            host=result.hostname,
-            port=result.port
-        )
-
-    raise ValueError("Unsupported DATABASE_URL format")
+def get_engine():
+    global _engine
+    if _engine is None:
+        _engine = create_engine(Config.DATABASE_URL, future=True)
+    return _engine
 
 
 # --------------------------
@@ -39,39 +19,44 @@ def get_connection():
 # --------------------------
 
 def insert_mood_log(user_id, mood, journal):
-    conn = get_connection()
-    cursor = conn.cursor()
+    engine = get_engine()
 
-    placeholder = get_placeholder()
+    query = text("""
+        INSERT INTO MoodLogs (user_id, mood_score, date, journal_entry)
+        VALUES (:user_id, :mood, :date, :journal)
+    """)
 
-    query = f'''
-    INSERT INTO MoodLogs (user_id, mood_score, date, journal_entry)
-    VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})
-    '''
-
-    cursor.execute(
-        query,
-        (user_id, mood, date.today().isoformat(), journal)
-    )
-
-    conn.commit()
-    conn.close()
+    with engine.begin() as conn:
+        conn.execute(
+            query,
+            {
+                "user_id": user_id,
+                "mood": mood,
+                "date": date.today().isoformat(),
+                "journal": journal
+            }
+        )
 
 
 def insert_behavior_log(user_id, sleep, activity, social):
-    conn = get_connection()
-    cursor = conn.cursor()
-    placeholder=get_placeholder()
-    query = f'''
+    engine = get_engine()
+
+    query = text("""
         INSERT INTO BehaviorData (user_id, sleep_hours, activity_level, social_interactions, date)
-        VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})
-        '''
-    cursor.execute(
-        query,
-        (user_id, sleep, activity, social, date.today().isoformat())
-    )
-    conn.commit()
-    conn.close()
+        VALUES (:user_id, :sleep, :activity, :social, :date)
+    """)
+
+    with engine.begin() as conn:
+        conn.execute(
+            query,
+            {
+                "user_id": user_id,
+                "sleep": sleep,
+                "activity": activity,
+                "social": social,
+                "date": date.today().isoformat()
+            }
+        )
 
 
 # --------------------------
@@ -79,51 +64,64 @@ def insert_behavior_log(user_id, sleep, activity, social):
 # --------------------------
 
 def get_recent_mood(user_id, limit=30):
-    conn = get_connection()
+    engine = get_engine()
 
-    placeholder = get_placeholder()
+    query = text("""
+        SELECT *
+        FROM MoodLogs
+        WHERE user_id = :user_id AND date != :excluded_date
+        ORDER BY date DESC
+        LIMIT :limit
+    """)
 
-    query = f'''
-    SELECT *
-    FROM MoodLogs
-    WHERE user_id={placeholder} AND date != {placeholder}
-    ORDER BY date DESC
-    LIMIT {placeholder}
-    '''
-
-    df = pd.read_sql(query, conn, params=(user_id, '2023-01-01', limit))
-
-    conn.close()
-    return df
+    return pd.read_sql(
+        query,
+        engine,
+        params={
+            "user_id": user_id,
+            "excluded_date": "2023-01-01",
+            "limit": limit
+        }
+    )
 
 
 def get_recent_behavior(user_id, limit=30):
-    conn = get_connection()
-    placeholder = get_placeholder()
-    query = f'''
-    SELECT *
-    FROM BehaviorData
-    WHERE user_id={placeholder} AND date != {placeholder}
-    ORDER BY date DESC
-    LIMIT {placeholder}
-    '''
-        
-    df = pd.read_sql(query, conn, params=(user_id, '2023-01-01', limit))
-    conn.close()
-    return df
+    engine = get_engine()
+
+    query = text("""
+        SELECT *
+        FROM BehaviorData
+        WHERE user_id = :user_id AND date != :excluded_date
+        ORDER BY date DESC
+        LIMIT :limit
+    """)
+
+    return pd.read_sql(
+        query,
+        engine,
+        params={
+            "user_id": user_id,
+            "excluded_date": "2023-01-01",
+            "limit": limit
+        }
+    )
 
 
 def get_all_journals(user_id):
-    conn = get_connection()
-    placeholder = get_placeholder()
-    query = f'''
-    SELECT date, journal_entry, mood_score
-    FROM MoodLogs
-    WHERE user_id={placeholder} AND date != {placeholder}
-    ORDER BY date DESC
-    '''
-        
-    df = pd.read_sql(query, conn, params=(user_id, '2023-01-01'))
-    
-    conn.close()
-    return df
+    engine = get_engine()
+
+    query = text("""
+        SELECT date, journal_entry, mood_score
+        FROM MoodLogs
+        WHERE user_id = :user_id AND date != :excluded_date
+        ORDER BY date DESC
+    """)
+
+    return pd.read_sql(
+        query,
+        engine,
+        params={
+            "user_id": user_id,
+            "excluded_date": "2023-01-01"
+        }
+    )

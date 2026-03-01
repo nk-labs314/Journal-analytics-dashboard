@@ -6,45 +6,46 @@ from services import analytics_service
 from services import data_service
 from services import insight_service
 from config import Config
-from services.data_service import get_connection
+from sqlalchemy import text
+from services.data_service import get_engine
 
 
 
 Default_User_Id = 1
 
 
-
 def init_db():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS Users (
-            user_id SERIAL PRIMARY KEY,
-            age INTEGER,
-            gender TEXT,
-            baseline_mood INTEGER
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS MoodLogs (
-            log_id SERIAL PRIMARY KEY,
-            user_id INTEGER,
-            mood_score INTEGER,
-            date TEXT,
-            journal_entry TEXT
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS BehaviorData (
-            user_id INTEGER,
-            sleep_hours REAL,
-            activity_level INTEGER,
-            social_interactions INTEGER,
-            date TEXT
-        )
-    ''')
-   
-    conn.commit()
+    engine = get_engine()
+
+    with engine.begin() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS Users (
+                user_id SERIAL PRIMARY KEY,
+                age INTEGER,
+                gender TEXT,
+                baseline_mood INTEGER
+            )
+        """))
+
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS MoodLogs (
+                log_id SERIAL PRIMARY KEY,
+                user_id INTEGER,
+                mood_score INTEGER,
+                date TEXT,
+                journal_entry TEXT
+            )
+        """))
+
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS BehaviorData (
+                user_id INTEGER,
+                sleep_hours REAL,
+                activity_level INTEGER,
+                social_interactions INTEGER,
+                date TEXT
+            )
+        """))
     conn.close()
 
 app = Flask(__name__)
