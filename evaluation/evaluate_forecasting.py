@@ -1,6 +1,6 @@
 import pandas as pd
 
-from forecasting import train_multi_horizon_forecast, HORIZONS
+from models.forecasting import train_multi_horizon_forecast, HORIZONS
 from utils.experiment_logger import log_experiment
 
 
