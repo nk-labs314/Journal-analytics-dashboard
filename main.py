@@ -167,21 +167,13 @@ def interpret_correlation(corr):
 @app.route('/dashboard')
 def dashboard():
     user_id = Default_User_Id
-    conn = sqlite3.connect(DB_PATH)
+
+    df_mood = data_service.get_recent_mood(user_id)
+    df_behavior = data_service.get_recent_behavior(user_id)
+    df_all_journals = data_service.get_all_journals(user_id)
+    df_journals = data_service.get_all_journals(user_id)
     
-    
-    df_mood = pd.read_sql(
-        'SELECT * FROM MoodLogs WHERE user_id=? AND date != ? ORDER BY date DESC LIMIT 30', 
-        conn, 
-        params=(user_id, '2023-01-01')
-    )
-    
-    
-    df_behavior = pd.read_sql(
-        'SELECT * FROM BehaviorData WHERE user_id=? AND date != ? ORDER BY date DESC LIMIT 30', 
-        conn, 
-        params=(user_id, '2023-01-01')
-    )
+
    # Aggregate to daily level first
     df_mood_daily = df_mood.groupby('date', as_index=False)['mood_score'].mean()
     df_behavior_daily = df_behavior.groupby('date', as_index=False)['sleep_hours'].mean()
@@ -212,11 +204,7 @@ def dashboard():
     avg_sleep = df_behavior['sleep_hours'].mean() if not df_behavior.empty else 0
 
     
-    df_all_journals = pd.read_sql(
-        'SELECT journal_entry FROM MoodLogs WHERE user_id=? AND date != ?', 
-        conn, 
-        params=(user_id, '2023-01-01')
-    )
+    
     # Ensure required columns exist
     if (
     len(df_combined) > 1
@@ -234,11 +222,7 @@ def dashboard():
     else:
         avg_sentiment = 0
 
-    df_journals = pd.read_sql(
-        'SELECT date, journal_entry, mood_score FROM MoodLogs WHERE user_id=? AND date != ? ORDER BY date DESC', 
-        conn, 
-        params=(user_id, '2023-01-01')
-    )
+
 
     mood_trend = detect_mood_trend(user_id)
 
@@ -355,7 +339,7 @@ def dashboard():
         'trend_label': trend_label
     }
 
-    conn.close()
+
     
     return render_template('dashboard.html', analysis=analysis)
 @app.route('/journals')
