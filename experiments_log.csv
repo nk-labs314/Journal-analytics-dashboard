@@ -1,0 +1,2 @@
+exp_id,timestamp,dataset_version,experiment_type,horizon,model_name,hyperparameters,metrics,baseline_metrics,train_size,test_size,notes
+599528f4,2026-03-01 15:08:22,synthetic_dataset_v1,lexicon,0,hybrid_lexicon,"{""global_min_freq"": 5, ""user_min_freq"": 3, ""k"": 10, ""train_ratio"": 0.8}","{""MAE"": 2.2287760097807245, ""R2"": 0.3709705262593993, ""correlation"": 0.9493515514868947}","{""MAE_baseline"": 2.935284509469856}",4000,1000,First official run on frozen dataset v1
