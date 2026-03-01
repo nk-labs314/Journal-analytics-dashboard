@@ -8,6 +8,7 @@ from services import insight_service
 from config import Config
 from sqlalchemy import text
 from services.data_service import get_engine
+import logging
 
 
 
@@ -116,6 +117,16 @@ def journals():
 
     return render_template('journals.html', journals=df_journals.to_dict(orient='records'))
 
+@app.route("/health")
+def health():
+    try:
+        engine = get_engine()
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {"status": "ok"}, 200
+    except Exception:
+        return {"status": "db_error"}, 500
+
 
 #sys.path.append(os.path.join(os.getcwd(), "Mental-health-Chatbot"))
 #def detect_language(user_input):
@@ -152,7 +163,22 @@ def journals():
         #    response = chat_response(user_input)
         #return f'<div id="bot-response">{response}</div>'
     #return render_template('chat.html', response=response, user_input=user_input)
-init_db()
+if Config.DEBUG:
+    init_db()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+@app.errorhandler(500)
+def handle_500(error):
+    logger.exception("Internal server error occurred")
+    return {"error": "Internal server error"}, 500
+
+
+@app.errorhandler(404)
+def handle_404(error):
+    return {"error": "Resource not found"}, 404
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=Config.DEBUG)
 
