@@ -153,5 +153,5 @@ def journals():
     #return render_template('chat.html', response=response, user_input=user_input)
 init_db()
 if __name__ == '__main__':
-    app.run(debug=Config.DEBUG)
+    app.run()
 
