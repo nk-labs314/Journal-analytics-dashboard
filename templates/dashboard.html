@@ -97,7 +97,10 @@
 </script>
 <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
     
-    <a href="{{ url_for('journals') }}">View Journal Entries</a>
-    <a href="{{ url_for('home') }}">Back Home</a>
+   <div style="margin-bottom:20px;">
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> |
+    <a href="{{ url_for('journals') }}">Journals</a> |
+    <a href="{{ url_for('forecast') }}">Forecast</a>
+</div>
 </body>
 </html>

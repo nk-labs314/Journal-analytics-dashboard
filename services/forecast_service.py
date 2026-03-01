@@ -25,7 +25,16 @@ class ForecastService:
         self.horizons = artifact["horizons"]
 
     def predict(self, user_df):
-        user_df = user_df.sort_values("entry_index")
+
+        if user_df.empty:
+            return None
+
+        # Sort chronologically using DB timestamp
+        user_df = user_df.sort_values("date").reset_index(drop=True)
+
+        # Generate sequential entry_index dynamically
+        user_df["entry_index"] = range(len(user_df))
+
         user_df = build_features(user_df)
         user_df = user_df.dropna()
 
@@ -40,4 +49,4 @@ class ForecastService:
         return {
             str(h): float(pred)
             for h, pred in zip(self.horizons, preds)
-        }
+    }

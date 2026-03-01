@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Forecast</title>
+</head>
+<body>
+    <h1>Mood Forecast</h1>
+
+    {% if predictions %}
+        <ul>
+            <li>3-Day Forecast: {{ predictions["3"] | round(2) }}</li>
+            <li>7-Day Forecast: {{ predictions["7"] | round(2) }}</li>
+            <li>14-Day Forecast: {{ predictions["14"] | round(2) }}</li>
+        </ul>
+    {% else %}
+        <p>Not enough data to generate forecast.</p>
+    {% endif %}
+
+    <div style="margin-bottom:20px;">
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> |
+    <a href="{{ url_for('journals') }}">Journals</a> |
+    <a href="{{ url_for('forecast') }}">Forecast</a>
+</div>
+</body>
+</html>

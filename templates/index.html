@@ -36,9 +36,11 @@
         </div>
         <button type="submit">Submit</button>
     </form>
-    <div style="margin-top: 20px;">
-        <a href="{{ url_for('dashboard') }}">View Dashboard</a> |
-        <a href="{{ url_for('journals') }}">View Journal Entries</a>
+    <div style="margin-bottom:20px;">
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> |
+    <a href="{{ url_for('journals') }}">Journals</a> |
+    <a href="{{ url_for('forecast') }}">Forecast</a>
+</div>
     </div>
 </body>
 </html>

@@ -18,7 +18,10 @@
         <p>No journal entries found.</p>
     {% endif %}
 
-    <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
-    <a href="{{ url_for('home') }}">View Homepage</a>
+    <div style="margin-bottom:20px;">
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> |
+    <a href="{{ url_for('journals') }}">Journals</a> |
+    <a href="{{ url_for('forecast') }}">Forecast</a>
+</div>
 </body>
 </html>

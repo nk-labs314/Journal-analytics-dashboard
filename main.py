@@ -1,7 +1,7 @@
 import sys
 import os
 from langdetect import detect
-from flask import Flask, flash, render_template, request, redirect, url_for
+from flask import Flask, flash, render_template, request, redirect, session, url_for
 from services import analytics_service
 from services import data_service
 from services import insight_service
@@ -9,11 +9,12 @@ from config import Config
 from sqlalchemy import text
 from services.data_service import get_engine
 import logging
-
+from services.forecast_service import ForecastService
+from services.data_service import get_all_journals  # assuming this exists
 
 
 Default_User_Id = 1
-
+forecast_service = ForecastService()
 
 def init_db():
     engine = get_engine()
@@ -117,15 +118,43 @@ def journals():
 
     return render_template('journals.html', journals=df_journals.to_dict(orient='records'))
 
+@app.route("/forecast")
+def forecast():
+    user_id = Default_User_Id
+
+    user_df = get_all_journals(user_id)  # must return DataFrame
+    predictions = forecast_service.predict(user_df)
+    
+
+    return render_template(
+        "forecast.html",
+        predictions=predictions
+    )
+
 @app.route("/health")
 def health():
     try:
+        # --- DB CHECK ---
         engine = get_engine()
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        return {"status": "ok"}, 200
+
+        db_status = "ok"
+
     except Exception:
         return {"status": "db_error"}, 500
+
+    # --- MODEL CHECK ---
+    try:
+        model_status = "loaded" if forecast_service.model else "missing"
+    except Exception:
+        model_status = "error"
+
+    return {
+        "status": "ok",
+        "database": db_status,
+        "forecast_model": model_status
+    }, 200
 
 
 #sys.path.append(os.path.join(os.getcwd(), "Mental-health-Chatbot"))
