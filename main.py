@@ -19,7 +19,7 @@ def init_db():
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS Users (
-            user_id INTEGER PRIMARY KEY,
+            user_id SERIAL PRIMARY KEY,
             age INTEGER,
             gender TEXT,
             baseline_mood INTEGER
@@ -27,7 +27,7 @@ def init_db():
     ''')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS MoodLogs (
-            log_id INTEGER PRIMARY KEY,
+            log_id SERIAL PRIMARY KEY,
             user_id INTEGER,
             mood_score INTEGER,
             date TEXT,
