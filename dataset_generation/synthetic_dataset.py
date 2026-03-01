@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 # DATASET VERSION
 # ===================================================
 
-DATASET_VERSION = "synthetic_dataset_v2"
+DATASET_VERSION = "synthetic_dataset_v3"
 
 
 # ===================================================
@@ -121,7 +121,7 @@ def generate_mood_series(n_entries, regime, rng):
 # Text Emission Model
 # ===================================================
 
-def sample_words_from_mood(mood, trend, rng):
+def sample_words_from_mood(mood, momentum, decline_streak, rise_streak, rng):
 
     if mood <= 3:
         w1 = rng.choice(NEG_STRONG)
@@ -141,11 +141,21 @@ def sample_words_from_mood(mood, trend, rng):
 
     topic = rng.choice(NEUTRAL)
     # Inject trend-aware word with moderate probability
-    if trend > 0.5 and rng.random() < 0.5:
+   # Strong negative momentum
+    if momentum < -1.0 and rng.random() < 0.6:
+        w2 = rng.choice(TREND_DOWN)
+
+    # Sustained decline
+    elif decline_streak >= 2 and rng.random() < 0.8:
+        w2 = rng.choice(TREND_DOWN)
+
+    # Strong positive momentum
+    elif momentum > 1.0 and rng.random() < 0.6:
         w2 = rng.choice(TREND_UP)
 
-    elif trend < -0.5 and rng.random() < 0.5:
-        w2 = rng.choice(TREND_DOWN)
+    # Sustained rise
+    elif rise_streak >= 2 and rng.random() < 0.8:
+        w2 = rng.choice(TREND_UP)
     template = rng.choice(TEMPLATES)
 
     return template.format(w1=w1, w2=w2, topic=topic)
@@ -170,16 +180,39 @@ def generate_synthetic_text_dataset(
         regime_label, regime = sample_user_regime(rng)
         moods = generate_mood_series(n_entries, regime, rng)
 
-        previous_mood = None
+        decline_streak = 0
+        rise_streak = 0
 
         for i, mood in enumerate(moods):
 
-            if previous_mood is None:
-                trend = 0
+            # ---- Momentum (2-step slope) ----
+            if i == 0:
+                momentum = 0
+            elif i == 1:
+                momentum = moods[i] - moods[i-1]
             else:
-                trend = mood - previous_mood
+                momentum = moods[i] - moods[i-2]
 
-            text = sample_words_from_mood(mood, trend, rng)
+            # ---- Track streaks ----
+            if i > 0:
+                if moods[i] < moods[i-1]:
+                    decline_streak += 1
+                    rise_streak = 0
+                elif moods[i] > moods[i-1]:
+                    rise_streak += 1
+                    decline_streak = 0
+                else:
+                    decline_streak = 0
+                    rise_streak = 0
+
+            # ---- Generate text with anticipatory signal ----
+            text = sample_words_from_mood(
+                mood,
+                momentum,
+                decline_streak,
+                rise_streak,
+                rng
+            )
 
             rows.append({
                 "user_id": user_id,
@@ -189,8 +222,6 @@ def generate_synthetic_text_dataset(
                 "text": text,
                 "regime_label": regime_label
             })
-
-            previous_mood = mood
     df = pd.DataFrame(rows)
 
     # Enforce strict chronological ordering
