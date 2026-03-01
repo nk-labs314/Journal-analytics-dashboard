@@ -15,15 +15,17 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from services import analytics_service
 from services import data_service
 from services import insight_service
+from config import Config
+from services.data_service import get_connection
 
 
 sys.path.append(os.path.join(os.getcwd(), "Mental-health-Chatbot"))
 Default_User_Id = 1
-DB_PATH = os.path.join(os.getcwd(), 'mental_health.db')
+
 
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS Users (
@@ -57,7 +59,8 @@ def init_db():
 
 app = Flask(__name__)
 app.static_folder = 'static'
-app.secret_key = "key"
+app.config.from_object(Config)
+app.secret_key = app.config["SECRET_KEY"]
 
 @app.route('/')
 def home():
@@ -160,5 +163,5 @@ def journals():
     #return render_template('chat.html', response=response, user_input=user_input)
 init_db()
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=Config.DEBUG)
 

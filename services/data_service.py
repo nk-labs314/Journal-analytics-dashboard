@@ -2,9 +2,17 @@ import sqlite3
 import pandas as pd
 from datetime import date
 import os
+from config import Config
 
 
-DB_PATH = os.path.join(os.getcwd(), 'mental_health.db')
+def get_connection():
+    db_url = Config.DATABASE_URL
+
+    if db_url.startswith("sqlite:///"):
+        db_path = db_url.replace("sqlite:///", "")
+        return sqlite3.connect(db_path)
+
+    raise ValueError("Unsupported DATABASE_URL format")
 
 
 # --------------------------
@@ -12,7 +20,7 @@ DB_PATH = os.path.join(os.getcwd(), 'mental_health.db')
 # --------------------------
 
 def insert_mood_log(user_id, mood, journal):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
         '''
@@ -26,7 +34,7 @@ def insert_mood_log(user_id, mood, journal):
 
 
 def insert_behavior_log(user_id, sleep, activity, social):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
         '''
@@ -44,7 +52,7 @@ def insert_behavior_log(user_id, sleep, activity, social):
 # --------------------------
 
 def get_recent_mood(user_id, limit=30):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     df = pd.read_sql(
         '''
         SELECT *
@@ -61,7 +69,7 @@ def get_recent_mood(user_id, limit=30):
 
 
 def get_recent_behavior(user_id, limit=30):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     df = pd.read_sql(
         '''
         SELECT *
@@ -78,7 +86,7 @@ def get_recent_behavior(user_id, limit=30):
 
 
 def get_all_journals(user_id):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_connection()
     df = pd.read_sql(
         '''
         SELECT date, journal_entry, mood_score
