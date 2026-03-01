@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 # DATASET VERSION
 # ===================================================
 
-DATASET_VERSION = "synthetic_dataset_v1"
+DATASET_VERSION = "synthetic_dataset_v2"
 
 
 # ===================================================
@@ -22,6 +22,8 @@ POS_MILD = ["productive", "motivated", "focused", "grateful", "content"]
 NEG_STRONG = ["depressed", "hopeless", "miserable", "overwhelmed", "worthless"]
 NEG_MILD = ["tired", "stressed", "anxious", "irritated", "low"]
 NEUTRAL = ["work", "meeting", "routine", "food", "weather", "family", "task"]
+TREND_UP = ["improving", "hopeful", "recovering", "gaining"]
+TREND_DOWN = ["declining", "unstable", "slipping", "worsening"]
 
 TEMPLATES = [
     "Today I felt {w1} and {w2}. It was mostly about {topic}.",
@@ -119,7 +121,7 @@ def generate_mood_series(n_entries, regime, rng):
 # Text Emission Model
 # ===================================================
 
-def sample_words_from_mood(mood, rng):
+def sample_words_from_mood(mood, trend, rng):
 
     if mood <= 3:
         w1 = rng.choice(NEG_STRONG)
@@ -138,6 +140,12 @@ def sample_words_from_mood(mood, rng):
         w2 = rng.choice(POS_MILD)
 
     topic = rng.choice(NEUTRAL)
+    # Inject trend-aware word with moderate probability
+    if trend > 0.5 and rng.random() < 0.5:
+        w2 = rng.choice(TREND_UP)
+
+    elif trend < -0.5 and rng.random() < 0.5:
+        w2 = rng.choice(TREND_DOWN)
     template = rng.choice(TEMPLATES)
 
     return template.format(w1=w1, w2=w2, topic=topic)
@@ -162,9 +170,16 @@ def generate_synthetic_text_dataset(
         regime_label, regime = sample_user_regime(rng)
         moods = generate_mood_series(n_entries, regime, rng)
 
+        previous_mood = None
+
         for i, mood in enumerate(moods):
 
-            text = sample_words_from_mood(mood, rng)
+            if previous_mood is None:
+                trend = 0
+            else:
+                trend = mood - previous_mood
+
+            text = sample_words_from_mood(mood, trend, rng)
 
             rows.append({
                 "user_id": user_id,
@@ -175,6 +190,7 @@ def generate_synthetic_text_dataset(
                 "regime_label": regime_label
             })
 
+            previous_mood = mood
     df = pd.DataFrame(rows)
 
     # Enforce strict chronological ordering
