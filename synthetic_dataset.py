@@ -1,13 +1,21 @@
 # synthetic_text_dataset.py
 
+import os
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 
 
-# ---------------------------------------------------
+# ===================================================
+# DATASET VERSION
+# ===================================================
+
+DATASET_VERSION = "synthetic_dataset_v1"
+
+
+# ===================================================
 # Vocabulary Pools
-# ---------------------------------------------------
+# ===================================================
 
 POS_STRONG = ["ecstatic", "thrilled", "confident", "energized", "inspired"]
 POS_MILD = ["productive", "motivated", "focused", "grateful", "content"]
@@ -23,15 +31,15 @@ TEMPLATES = [
 ]
 
 
-# ---------------------------------------------------
+# ===================================================
 # Regime Sampler
-# ---------------------------------------------------
+# ===================================================
 
 def sample_user_regime(rng):
     regime_type = rng.choice(["stable_high", "volatile", "low_mean", "cyclical"])
 
     if regime_type == "stable_high":
-        return {
+        regime = {
             "baseline": rng.uniform(7.0, 8.5),
             "phi": rng.uniform(0.85, 0.95),
             "volatility": 0.7,
@@ -41,7 +49,7 @@ def sample_user_regime(rng):
         }
 
     elif regime_type == "volatile":
-        return {
+        regime = {
             "baseline": rng.uniform(5.5, 6.5),
             "phi": rng.uniform(0.6, 0.75),
             "volatility": 2.0,
@@ -51,7 +59,7 @@ def sample_user_regime(rng):
         }
 
     elif regime_type == "low_mean":
-        return {
+        regime = {
             "baseline": rng.uniform(3.5, 5.0),
             "phi": rng.uniform(0.8, 0.9),
             "volatility": 1.2,
@@ -61,7 +69,7 @@ def sample_user_regime(rng):
         }
 
     else:  # cyclical
-        return {
+        regime = {
             "baseline": rng.uniform(5.5, 7.0),
             "phi": rng.uniform(0.75, 0.9),
             "volatility": 1.0,
@@ -70,10 +78,12 @@ def sample_user_regime(rng):
             "cycle_period": rng.integers(40, 100)
         }
 
+    return regime_type, regime
 
-# ---------------------------------------------------
+
+# ===================================================
 # Mood Generator
-# ---------------------------------------------------
+# ===================================================
 
 def generate_mood_series(n_entries, regime, rng):
     moods = []
@@ -105,9 +115,9 @@ def generate_mood_series(n_entries, regime, rng):
     return moods
 
 
-# ---------------------------------------------------
+# ===================================================
 # Text Emission Model
-# ---------------------------------------------------
+# ===================================================
 
 def sample_words_from_mood(mood, rng):
 
@@ -133,14 +143,14 @@ def sample_words_from_mood(mood, rng):
     return template.format(w1=w1, w2=w2, topic=topic)
 
 
-# ---------------------------------------------------
+# ===================================================
 # Full Dataset Generator
-# ---------------------------------------------------
+# ===================================================
 
 def generate_synthetic_text_dataset(
     n_users=5,
-    n_entries=3000,
-    random_state=None
+    n_entries=1000,
+    random_state=42
 ):
     rng = np.random.default_rng(random_state)
 
@@ -149,7 +159,7 @@ def generate_synthetic_text_dataset(
 
     for user_id in range(1, n_users + 1):
 
-        regime = sample_user_regime(rng)
+        regime_label, regime = sample_user_regime(rng)
         moods = generate_mood_series(n_entries, regime, rng)
 
         for i, mood in enumerate(moods):
@@ -162,8 +172,35 @@ def generate_synthetic_text_dataset(
                 "date": start_date + timedelta(days=i),
                 "mood_score": mood,
                 "text": text,
-                "regime_type": regime  # for debugging/analysis
+                "regime_label": regime_label
             })
 
     df = pd.DataFrame(rows)
+
+    # Enforce strict chronological ordering
+    df = df.sort_values(["user_id", "entry_index"]).reset_index(drop=True)
+
     return df
+
+
+# ===================================================
+# FREEZE DATASET TO CSV
+# ===================================================
+
+if __name__ == "__main__":
+
+    os.makedirs("data", exist_ok=True)
+
+    df = generate_synthetic_text_dataset(
+        n_users=10,
+        n_entries=500,
+        random_state=42
+    )
+
+    output_path = f"data/{DATASET_VERSION}.csv"
+    df.to_csv(output_path, index=False)
+
+    print(f"[INFO] Dataset version: {DATASET_VERSION}")
+    print(f"[INFO] Saved to: {output_path}")
+    print(f"[INFO] Rows: {len(df)}")
+    print(f"[INFO] Users: {df['user_id'].nunique()}")
