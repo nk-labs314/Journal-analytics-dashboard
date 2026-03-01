@@ -1,17 +1,7 @@
-from statistics import correlation
 import sys
 import os
-import sqlite3
-import pandas as pd
-import re
-import json
-import random
-import numpy as np
-import nltk
-from datetime import date
 from langdetect import detect
 from flask import Flask, flash, render_template, request, redirect, url_for
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from services import analytics_service
 from services import data_service
 from services import insight_service
@@ -19,7 +9,7 @@ from config import Config
 from services.data_service import get_connection
 
 
-sys.path.append(os.path.join(os.getcwd(), "Mental-health-Chatbot"))
+
 Default_User_Id = 1
 
 
@@ -126,7 +116,7 @@ def journals():
     return render_template('journals.html', journals=df_journals.to_dict(orient='records'))
 
 
-
+#sys.path.append(os.path.join(os.getcwd(), "Mental-health-Chatbot"))
 #def detect_language(user_input):
    # try:
        # if len(user_input.split()) < 5:
