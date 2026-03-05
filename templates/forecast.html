@@ -1,28 +1,50 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Forecast</title>
-</head>
-<body>
-    <h1>Mood Forecast</h1>
-    <p>Logged in as <strong>{{ session.get('username') }}</strong> | <a href="{{ url_for('logout') }}">Logout</a></p>
+{% extends "base.html" %}
 
-    {% if predictions %}
-        <ul>
-            <li>3-Day Forecast: {{ predictions["3"] | round(2) }}</li>
-            <li>7-Day Forecast: {{ predictions["7"] | round(2) }}</li>
-            <li>14-Day Forecast: {{ predictions["14"] | round(2) }}</li>
-        </ul>
-    {% else %}
-        <p>Not enough data to generate forecast.</p>
-    {% endif %}
+{% block title %}Forecast — MoodLens{% endblock %}
 
-    <div style="margin-bottom:20px;">
-    <a href="{{ url_for('dashboard') }}">Dashboard</a> |
-    <a href="{{ url_for('journals') }}">Journals</a> |
-    <a href="{{ url_for('forecast') }}">Forecast</a> |
-    <a href="{{ url_for('insights') }}">Insights</a> |
-    <a href="{{ url_for('logout') }}">Logout</a>
+{% block content %}
+<div class="page-header">
+    <h1>🔮 Mood Forecast</h1>
 </div>
-</body>
-</html>
+
+{% if predictions %}
+<div class="grid grid-3">
+    <div class="card forecast-card">
+        <div class="forecast-horizon">3-Day</div>
+        <div class="forecast-value">{{ predictions["3"] | round(2) }}</div>
+        <div class="forecast-label">predicted mood</div>
+    </div>
+
+    <div class="card forecast-card">
+        <div class="forecast-horizon">7-Day</div>
+        <div class="forecast-value">{{ predictions["7"] | round(2) }}</div>
+        <div class="forecast-label">predicted mood</div>
+    </div>
+
+    <div class="card forecast-card">
+        <div class="forecast-horizon">14-Day</div>
+        <div class="forecast-value">{{ predictions["14"] | round(2) }}</div>
+        <div class="forecast-label">predicted mood</div>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 24px;">
+    <div class="card-header">
+        <h3>About the Forecast</h3>
+    </div>
+    <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7;">
+        These predictions are generated using a Ridge regression model trained on your past mood patterns,
+        including rolling averages, lag features, and cyclical time encoding. The forecasts represent
+        expected average mood scores for the next 3, 7, and 14 days.
+    </p>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-icon">🔮</div>
+        <h3>Not enough data yet</h3>
+        <p>Log at least 14 journal entries to generate a mood forecast.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,43 +1,46 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{% if mode == "register" %}Register{% else %}Login{% endif %}</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 480px; margin: 40px auto; padding: 20px; }
-        .form-group { margin-bottom: 15px; }
-        input { width: 100%; padding: 8px; }
-        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; }
-    </style>
-</head>
-<body>
-    {% with messages = get_flashed_messages() %}
+{% extends "base.html" %}
+
+{% block title %}{% if mode == "register" %}Create Account{% else %}Login{% endif %} — MoodLens{% endblock %}
+
+{% block auth_content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-icon">📓</div>
+            <h1>{% if mode == "register" %}Create Account{% else %}Welcome Back{% endif %}</h1>
+            <p>{% if mode == "register" %}Start tracking your mental health{% else %}Sign in to your dashboard{% endif
+                %}</p>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
         {% if messages %}
-            <div style="padding:10px; background:#d4edda; color:#155724; margin-bottom:15px;">
-                {{ messages[0] }}
+        <div class="flash-message flash-error">
+            ⚠️ {{ messages[0] }}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="username" class="form-control" placeholder="Enter your username" required>
             </div>
-        {% endif %}
-    {% endwith %}
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">
+                {% if mode == "register" %}Create Account{% else %}Sign In{% endif %}
+            </button>
+        </form>
 
-    <h1>{% if mode == "register" %}Create Account{% else %}Login{% endif %}</h1>
-
-    <form method="POST">
-        <div class="form-group">
-            <label>Username</label>
-            <input type="text" name="username" required>
+        <div class="auth-footer">
+            {% if mode == "register" %}
+            Already have an account? <a href="{{ url_for('login') }}">Sign In</a>
+            {% else %}
+            No account yet? <a href="{{ url_for('register') }}">Create one</a>
+            {% endif %}
         </div>
-        <div class="form-group">
-            <label>Password</label>
-            <input type="password" name="password" required>
-        </div>
-        <button type="submit">{% if mode == "register" %}Register{% else %}Login{% endif %}</button>
-    </form>
-
-    <p style="margin-top:15px;">
-        {% if mode == "register" %}
-            Already have an account? <a href="{{ url_for('login') }}">Login</a>
-        {% else %}
-            No account yet? <a href="{{ url_for('register') }}">Register</a>
-        {% endif %}
-    </p>
-</body>
-</html>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}AI Chat — MoodLens{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>💬 AI Chat</h1>
+    <div class="header-actions">
+        <span class="card-badge">Powered by RAG</span>
+    </div>
+</div>
+
+<div class="card chat-container">
+    <div class="chat-messages" id="chatMessages">
+        {% if not response and not query %}
+        <div class="empty-state">
+            <div class="empty-icon">💬</div>
+            <h3>Ask about your mood patterns</h3>
+            <p>Try questions like "Why has my mood been declining?", "What patterns do you see?", or "How has my sleep
+                affected my mood?"</p>
+        </div>
+        {% endif %}
+
+        {% if query %}
+        <div class="chat-message user">
+            <div class="message-avatar">{{ session.get('username', '?')[0]|upper }}</div>
+            <div class="message-content">
+                <div class="message-sender">You</div>
+                <div class="message-text">{{ query }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if response %}
+        <div class="chat-message assistant">
+            <div class="message-avatar">🤖</div>
+            <div class="message-content">
+                <div class="message-sender">MoodLens AI</div>
+                <div class="message-text">{{ response }}</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <form method="POST" class="chat-input-area">
+        <textarea name="query" placeholder="Ask about your mood, patterns, or insights..." rows="2" required></textarea>
+        <button type="submit" class="btn btn-primary" style="align-self: flex-end;">
+            Send 🚀
+        </button>
+    </form>
+</div>
+{% endblock %}

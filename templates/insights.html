@@ -1,34 +1,78 @@
-<h1>Text Mood Insights</h1>
-<p>Logged in as <strong>{{ session.get('username') }}</strong> | <a href="{{ url_for('logout') }}">Logout</a></p>
+{% extends "base.html" %}
 
-<form method="POST">
-    <textarea name="text" rows="6" cols="50"></textarea>
-    <br>
-    <button type="submit">Analyze</button>
-</form>
+{% block title %}Insights — MoodLens{% endblock %}
 
-{% if result %}
-<h2>Predicted Mood: {{ result }}</h2>
-
-<h3>Positive Signals</h3>
-<ul>
-{% for word, score in contributions if score > 0 %}
-    <li>{{ word }} : +{{ "%.2f"|format(score) }}</li>
-{% endfor %}
-</ul>
-
-<h3>Negative Signals</h3>
-<ul>
-{% for word, score in contributions if score < 0 %}
-    <li>{{ word }} : {{ "%.2f"|format(score) }}</li>
-{% endfor %}
-</ul>
-
-{% endif %}
-  <div style="margin-bottom:20px;">
-    <a href="{{ url_for('dashboard') }}">Dashboard</a> |
-    <a href="{{ url_for('journals') }}">Journals</a> |
-    <a href="{{ url_for('forecast') }}">Forecast</a>
-    <a href="{{ url_for('insights') }}">Insights</a> |
-    <a href="{{ url_for('logout') }}">Logout</a>
+{% block content %}
+<div class="page-header">
+    <h1>💡 Text Mood Insights</h1>
 </div>
+
+<div class="grid grid-2">
+    <!-- Input Form -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Analyze Text</h3>
+            <span class="card-badge">Lexicon Model</span>
+        </div>
+        <form method="POST">
+            <div class="form-group">
+                <label>Enter text to analyze</label>
+                <textarea name="text" class="form-control" rows="6"
+                    placeholder="Write any text and the lexicon model will predict its mood score based on word-level signals..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">🔍 Analyze</button>
+        </form>
+    </div>
+
+    <!-- Results -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Results</h3>
+        </div>
+        {% if result %}
+        <div class="metric-card" style="margin-bottom: 20px; text-align: center;">
+            <div class="metric-label">Predicted Mood Score</div>
+            <div class="metric-value" style="font-size: 2.2rem; color: var(--primary);">{{ result }}</div>
+            <div class="metric-change neutral">out of 10</div>
+        </div>
+
+        {% if contributions %}
+        <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 10px; color: var(--text-secondary);">Word
+            Contributions</h4>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+                <h5 style="font-size: 0.8rem; color: var(--success); font-weight: 600; margin-bottom: 6px;">↑ Positive
+                    Signals</h5>
+                <ul class="contribution-list">
+                    {% for word, score in contributions if score > 0 %}
+                    <li class="contribution-item positive">
+                        <span class="contribution-word">{{ word }}</span>
+                        <span class="contribution-score positive">+{{ "%.2f"|format(score) }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div>
+                <h5 style="font-size: 0.8rem; color: var(--danger); font-weight: 600; margin-bottom: 6px;">↓ Negative
+                    Signals</h5>
+                <ul class="contribution-list">
+                    {% for word, score in contributions if score < 0 %} <li class="contribution-item negative">
+                        <span class="contribution-word">{{ word }}</span>
+                        <span class="contribution-score negative">{{ "%.2f"|format(score) }}</span>
+                        </li>
+                        {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">💡</div>
+            <h3>Submit text to analyze</h3>
+            <p>The lexicon model will predict mood and show which words contribute positively or negatively.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

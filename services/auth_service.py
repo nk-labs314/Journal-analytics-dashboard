@@ -1,8 +1,10 @@
+import logging
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 from services.data_service import get_engine
 
+logger = logging.getLogger(__name__)
 
 def create_user(username, password):
     engine = get_engine()

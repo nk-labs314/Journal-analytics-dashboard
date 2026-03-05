@@ -1,6 +1,10 @@
 import pandas as pd
+import numpy as np
+import logging
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from services import data_service
+
+logger = logging.getLogger(__name__)
 
 vader_analyzer = SentimentIntensityAnalyzer()
 
@@ -10,7 +14,11 @@ vader_analyzer = SentimentIntensityAnalyzer()
 # ---------------------------
 
 def analyze_sentiment(text):
-    return vader_analyzer.polarity_scores(text)['compound']
+    try:
+        return vader_analyzer.polarity_scores(text)['compound']
+    except Exception:
+        logger.exception("Sentiment analysis failed for text")
+        return 0
 
 
 # ---------------------------
@@ -34,12 +42,15 @@ def interpret_correlation(corr):
 
 
 # ---------------------------
-# Mood Trend (No direct DB)
+# Mood Trend (slope-based)
 # ---------------------------
 
 def detect_mood_trend(user_id):
-
-    df = data_service.get_recent_mood(user_id, limit=100)
+    try:
+        df = data_service.get_recent_mood(user_id, limit=100)
+    except Exception:
+        logger.exception("Failed to fetch mood data for trend detection")
+        return "Data unavailable"
 
     if len(df) < 7:
         return "Insufficient data (need 7+ entries)"
@@ -47,10 +58,22 @@ def detect_mood_trend(user_id):
     df = df.sort_values('date')
     df['rolling_avg'] = df['mood_score'].rolling(window=7).mean()
 
-    if df['rolling_avg'].iloc[-1] < df['mood_score'].mean() - 1:
-        return "Downward"
+    recent_values = df['rolling_avg'].dropna().tail(5)
 
-    return "Stable"
+    if len(recent_values) < 2:
+        return "Insufficient data"
+
+    x = np.arange(len(recent_values))
+    y = recent_values.values
+
+    slope, _ = np.polyfit(x, y, 1)
+
+    if slope > 0.1:
+        return "Improving"
+    elif slope < -0.1:
+        return "Declining"
+    else:
+        return "Stable"
 
 
 # ---------------------------
@@ -58,8 +81,11 @@ def detect_mood_trend(user_id):
 # ---------------------------
 
 def analyze_behavior(user_id):
-
-    df = data_service.get_recent_behavior(user_id, limit=100)
+    try:
+        df = data_service.get_recent_behavior(user_id, limit=100)
+    except Exception:
+        logger.exception("Failed to fetch behavior data")
+        return []
 
     alerts = []
 

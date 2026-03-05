@@ -6,4 +6,4 @@ mental_health.db-journal
 *.db-journal
 *.db-wal
 *.db-shm
-
+.env

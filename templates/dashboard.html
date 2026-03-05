@@ -1,109 +1,124 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Dashboard</title>
-    <style>
-    .metrics {
-      display: flex;
-      gap: 20px;
-      margin-bottom: 20px;
-    }
-    .metrics div {
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-    .charts-container {
-    display: flex;
-    gap: 30px;
-    margin-top: 40px;
-    flex-wrap: wrap;
-}
+{% extends "base.html" %}
 
-.chart-box {
-    flex: 1;
-    min-width: 400px;
-    height: 400px;
-}
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
-    <h1>Health Dashboard</h1>
-    <p>Logged in as <strong>{{ session.get('username') }}</strong> | <a href="{{ url_for('logout') }}">Logout</a></p>
-    <body>
+{% block title %}Dashboard — MoodLens{% endblock %}
 
-  <h1>Dashboard</h1>
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
 
-  <h2>Summary Metrics (Last 7 Entries)</h2>
-
-  <div class="metrics">
-    <div><strong>7-Day Avg Mood:</strong> {{ analysis.avg_mood_7d }}</div>
-    <div><strong>Mood Volatility:</strong> {{ analysis.mood_volatility }}</div>
-    <div><strong>Avg Sleep (hrs):</strong> {{ analysis.avg_sleep }}</div>
-    <div><strong>Mood Trend:</strong> {{ analysis.trend_label }}</div>
-    <p><strong>Overall Insight:</strong> {{ analysis.summary_text }}</p>
-  </div>
-
-  <!-- Existing Sentiment / Alerts / Journals below -->
-
-</body>
-    <div class="metric-card">
-        <h3>Average Sentiment Score: {{ analysis.sentiment|round(2) }}</h3>
+{% block content %}
+<div class="page-header">
+    <h1>📊 Dashboard</h1>
+    <div class="header-actions">
+        <span class="badge badge-info">Last 30 entries</span>
     </div>
-    <div class="metric-card">
-        <h3>Mood Trend: {{ analysis.mood_trend }}</h3>
-    </div>
-    <div class="metric-card">
-    <h3>
-        Mood Volatility: 
-        {{ analysis.mood_volatility }} 
-        ({{ analysis.volatility_label }})
-    </h3>
 </div>
 
-<div class="metric-card">
-    <h3>
-        Mood vs Sleep Correlation:
-        {{ analysis.correlation }}
-        ({{ analysis.correlation_label }})
-    </h3>
+<!-- Summary Text -->
+{% if analysis.summary_text %}
+<div class="card"
+    style="margin-bottom: 20px; background: linear-gradient(135deg, rgba(108,92,231,0.05), rgba(162,155,254,0.05));">
+    <p style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.7;">
+        ✨ {{ analysis.summary_text }}
+    </p>
 </div>
-    {% if analysis.alerts %}
-    <div class="metric-card alert">
-        <h3>Alerts:</h3>
-        <ul>
+{% endif %}
+
+<!-- Metric Cards -->
+<div class="grid grid-4" style="margin-bottom: 24px;">
+    <div class="metric-card">
+        <div class="metric-label">Avg Mood (7d)</div>
+        <div class="metric-value">{{ analysis.avg_mood_7d }}</div>
+        <div
+            class="metric-change {% if analysis.trend_label == 'Improving' %}positive{% elif analysis.trend_label == 'Declining' %}negative{% else %}neutral{% endif %}">
+            {{ analysis.trend_label }}
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">Volatility</div>
+        <div class="metric-value">{{ analysis.mood_volatility }}</div>
+        <div class="metric-change neutral">{{ analysis.volatility_label }}</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">Avg Sleep</div>
+        <div class="metric-value">{{ analysis.avg_sleep }}h</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-label">Sentiment</div>
+        <div class="metric-value">{{ analysis.sentiment|round(2) }}</div>
+        <div
+            class="metric-change {% if analysis.sentiment > 0.1 %}positive{% elif analysis.sentiment < -0.1 %}negative{% else %}neutral{% endif %}">
+            {% if analysis.sentiment > 0.1 %}Positive{% elif analysis.sentiment < -0.1 %}Negative{% else %}Neutral{%
+                endif %} </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-2" style="margin-bottom: 24px;">
+        <div class="card">
+            <div class="card-header">
+                <h3>Mood Over Time</h3>
+                <span class="card-badge">Chart</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="moodChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Sleep vs Mood</h3>
+                <span class="card-badge">Correlation: {{ analysis.correlation }}</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="scatterChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="grid grid-2">
+        <div class="card">
+            <div class="card-header">
+                <h3>Mood Trend</h3>
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-secondary);">
+                <span
+                    class="badge {% if analysis.mood_trend == 'Improving' %}badge-success{% elif analysis.mood_trend == 'Declining' %}badge-danger{% else %}badge-info{% endif %}">
+                    {{ analysis.mood_trend }}
+                </span>
+            </p>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 10px;">
+                Mood vs Sleep: {{ analysis.correlation_label }}
+            </p>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Alerts</h3>
+            </div>
+            {% if analysis.alerts %}
             {% for alert in analysis.alerts %}
-            <li>{{ alert }}</li>
+            <div class="flash-message flash-error" style="margin-bottom: 8px;">
+                ⚠️ {{ alert }}
+            </div>
             {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
-<div class="charts-container">
-    <div class="chart-box">
-        <canvas id="moodChart"></canvas>
+            {% else %}
+            <p style="font-size: 0.9rem; color: var(--text-muted);">✅ No alerts — you're doing great!</p>
+            {% endif %}
+        </div>
     </div>
 
-    <div class="chart-box">
-        <canvas id="scatterChart"></canvas>
-    </div>
-</div>
-<script>
-    window.moodDates = {{ analysis.mood_dates | tojson }};
-    window.moodValues = {{ analysis.mood_values | tojson }};
-    window.rollingValues = {{ analysis.rolling_values | tojson }};
-    window.sleepValues = {{ analysis.sleep_values | tojson }};
-    window.moodValuesScatter = {{ analysis.mood_values_scatter | tojson }};
-    window.stabilityValues = {{ analysis.stability_values | tojson }}; 
-</script>
-<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
-    
-   <div style="margin-bottom:20px;">
-    <a href="{{ url_for('dashboard') }}">Dashboard</a> |
-    <a href="{{ url_for('journals') }}">Journals</a> |
-    <a href="{{ url_for('forecast') }}">Forecast</a>
-    <a href="{{ url_for('insights') }}">Insights</a> |
-    <a href="{{ url_for('logout') }}">Logout</a>
-</div>
-</body>
-</html>
+    <script>
+        window.moodDates = {{ analysis.mood_dates | tojson }};
+        window.moodValues = {{ analysis.mood_values | tojson }};
+        window.rollingValues = {{ analysis.rolling_values | tojson }};
+        window.sleepValues = {{ analysis.sleep_values | tojson }};
+        window.moodValuesScatter = {{ analysis.mood_values_scatter | tojson }};
+        window.stabilityValues = {{ analysis.stability_values | tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+    {% endblock %}

@@ -19,8 +19,9 @@ stop_words = None
 
 
 def _prepare_nltk_data():
-    # Render instances may not have corpora preinstalled; use a writable path.
-    data_dir = os.getenv("NLTK_DATA", "/tmp/nltk_data")
+    # Use a cross-platform writable path for NLTK data
+    import tempfile
+    data_dir = os.getenv("NLTK_DATA", os.path.join(tempfile.gettempdir(), "nltk_data"))
     if data_dir not in nltk.data.path:
         nltk.data.path.insert(0, data_dir)
 
@@ -40,6 +41,18 @@ def _prepare_nltk_data():
                 nltk.download(pkg, download_dir=data_dir, quiet=True)
             except Exception as exc:
                 logger.warning("Could not download NLTK resource '%s': %s", pkg, exc)
+
+    # Reload wordnet corpus to avoid stale LazyCorpusLoader state
+    try:
+        from nltk.corpus import wordnet as wn
+        if hasattr(wn, '_LazyCorpusLoader__args') or not hasattr(wn, '_morphy'):
+            wn.ensure_loaded()
+    except Exception:
+        pass
+
+
+# Ensure NLTK data is ready before any tokenization
+_prepare_nltk_data()
 
 
 def _get_stopwords():

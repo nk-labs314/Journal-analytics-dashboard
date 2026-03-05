@@ -14,6 +14,7 @@ class ForecastService:
         self.model = None
         self.feature_columns = None
         self.horizons = None
+        self.lexicon = None
         self.load_model()
 
     def load_model(self):
@@ -23,7 +24,18 @@ class ForecastService:
         self.model = artifact["model"]
         self.feature_columns = artifact["feature_columns"]
         self.horizons = artifact["horizons"]
-        logger.info("Forecast model loaded successfully")
+
+        # Load lexicon from the same artifact if available
+        if "global_lexicon" in artifact:
+            self.lexicon = {
+                "global_lexicon": artifact["global_lexicon"],
+                "global_counts": artifact["global_counts"],
+                "global_mean": artifact["global_mean"],
+            }
+            logger.info("Forecast model + lexicon loaded successfully")
+        else:
+            self.lexicon = None
+            logger.info("Forecast model loaded (no lexicon in artifact)")
 
     def predict(self, user_df):
         if user_df.empty:
@@ -36,7 +48,7 @@ class ForecastService:
         # Generate sequential entry_index dynamically
         user_df["entry_index"] = range(len(user_df))
 
-        user_df = build_features(user_df)
+        user_df = build_features(user_df, lexicon=self.lexicon)
         user_df = user_df.dropna()
 
         if user_df.empty:
@@ -50,4 +62,4 @@ class ForecastService:
         return {
             str(h): float(pred)
             for h, pred in zip(self.horizons, preds)
-    }
+        }
