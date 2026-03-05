@@ -1,5 +1,6 @@
 import sys
 import os
+from functools import wraps
 from langdetect import detect
 from flask import Flask, flash, render_template, request, redirect, session, url_for
 from services import analytics_service
@@ -12,14 +13,29 @@ import logging
 from services.forecast_service import ForecastService
 from services.data_service import get_all_journals  
 from services.lexicon_service import LexiconService
+from services import auth_service
 
-
-Default_User_Id = 1
 forecast_service = ForecastService()
 lexicon_service = LexiconService()
 
 def init_db():
     engine = get_engine()
+    auth_users_sql = """
+        CREATE TABLE IF NOT EXISTS AuthUsers (
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL
+        )
+    """
+
+    if engine.dialect.name != "sqlite":
+        auth_users_sql = """
+            CREATE TABLE IF NOT EXISTS AuthUsers (
+                user_id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL
+            )
+        """
 
     with engine.begin() as conn:
         conn.execute(text("""
@@ -30,6 +46,8 @@ def init_db():
                 baseline_mood INTEGER
             )
         """))
+
+        conn.execute(text(auth_users_sql))
 
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS MoodLogs (
@@ -52,18 +70,87 @@ def init_db():
         """))
     conn.close()
 
+
+def login_required(view_func):
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            flash("Please log in to continue.")
+            return redirect(url_for("login"))
+        return view_func(*args, **kwargs)
+
+    return wrapper
+
 app = Flask(__name__)
 app.static_folder = 'static'
 app.config.from_object(Config)
 app.secret_key = app.config["SECRET_KEY"]
 
 @app.route('/')
+@login_required
 def home():
     return render_template("index.html")
 
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if "user_id" in session:
+        return redirect(url_for("home"))
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        if not username or not password:
+            flash("Username and password are required.")
+            return redirect(url_for("register"))
+
+        created = auth_service.create_user(username, password)
+        if not created:
+            flash("Username already exists.")
+            return redirect(url_for("register"))
+
+        user_id = auth_service.verify_user(username, password)
+        session["user_id"] = user_id
+        session["username"] = username
+        flash("Account created.")
+        return redirect(url_for("home"))
+
+    return render_template("login.html", mode="register")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if "user_id" in session:
+        return redirect(url_for("home"))
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        user_id = auth_service.verify_user(username, password)
+        if user_id is None:
+            flash("Invalid username or password.")
+            return redirect(url_for("login"))
+
+        session["user_id"] = user_id
+        session["username"] = username
+        flash("Logged in successfully.")
+        return redirect(url_for("home"))
+
+    return render_template("login.html", mode="login")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("Logged out.")
+    return redirect(url_for("login"))
+
 @app.route('/log', methods=['POST'])
+@login_required
 def log_entry():
-    user_id = Default_User_Id
+    user_id = session["user_id"]
     data = {
         'mood': int(request.form['mood']),
         'journal': request.form['journal'],
@@ -90,8 +177,9 @@ def log_entry():
 
 
 @app.route('/dashboard')
+@login_required
 def dashboard():
-    user_id = Default_User_Id
+    user_id = session["user_id"]
 
     df_mood = data_service.get_recent_mood(user_id)
     df_behavior = data_service.get_recent_behavior(user_id)
@@ -114,15 +202,17 @@ def dashboard():
 
 
 @app.route('/journals')
+@login_required
 def journals():
-    user_id = Default_User_Id
+    user_id = session["user_id"]
     df_journals = data_service.get_all_journals(user_id)
 
     return render_template('journals.html', journals=df_journals.to_dict(orient='records'))
 
 @app.route("/forecast")
+@login_required
 def forecast():
-    user_id = Default_User_Id
+    user_id = session["user_id"]
 
     user_df = get_all_journals(user_id)  # must return DataFrame
     predictions = forecast_service.predict(user_df)
@@ -134,6 +224,7 @@ def forecast():
     )
 
 @app.route("/insights", methods=["GET", "POST"])
+@login_required
 def insights():
     result = None
     contributions = []

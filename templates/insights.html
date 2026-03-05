@@ -1,4 +1,5 @@
 <h1>Text Mood Insights</h1>
+<p>Logged in as <strong>{{ session.get('username') }}</strong> | <a href="{{ url_for('logout') }}">Logout</a></p>
 
 <form method="POST">
     <textarea name="text" rows="6" cols="50"></textarea>
@@ -28,5 +29,6 @@
     <a href="{{ url_for('dashboard') }}">Dashboard</a> |
     <a href="{{ url_for('journals') }}">Journals</a> |
     <a href="{{ url_for('forecast') }}">Forecast</a>
-    <a href="{{ url_for('insights') }}">Insights</a>
+    <a href="{{ url_for('insights') }}">Insights</a> |
+    <a href="{{ url_for('logout') }}">Logout</a>
 </div>

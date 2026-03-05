@@ -30,6 +30,7 @@
 </head>
 <body>
     <h1>Health Dashboard</h1>
+    <p>Logged in as <strong>{{ session.get('username') }}</strong> | <a href="{{ url_for('logout') }}">Logout</a></p>
     <body>
 
   <h1>Dashboard</h1>
@@ -101,7 +102,8 @@
     <a href="{{ url_for('dashboard') }}">Dashboard</a> |
     <a href="{{ url_for('journals') }}">Journals</a> |
     <a href="{{ url_for('forecast') }}">Forecast</a>
-    <a href="{{ url_for('insights') }}">Insights</a>
+    <a href="{{ url_for('insights') }}">Insights</a> |
+    <a href="{{ url_for('logout') }}">Logout</a>
 </div>
 </body>
 </html>

@@ -5,6 +5,7 @@
 </head>
 <body>
     <h1>All Journal Entries</h1>
+    <p>Logged in as <strong>{{ session.get('username') }}</strong> | <a href="{{ url_for('logout') }}">Logout</a></p>
 
     {% if journals %}
         {% for journal in journals %}
@@ -22,7 +23,8 @@
     <a href="{{ url_for('dashboard') }}">Dashboard</a> |
     <a href="{{ url_for('journals') }}">Journals</a> |
     <a href="{{ url_for('forecast') }}">Forecast</a>
-    <a href="{{ url_for('insights') }}">Insights</a>
+    <a href="{{ url_for('insights') }}">Insights</a> |
+    <a href="{{ url_for('logout') }}">Logout</a>
 </div>
 </body>
 </html>
