@@ -19,30 +19,11 @@ stop_words = None
 
 
 def _prepare_nltk_data():
-    # Use a cross-platform writable path for NLTK data
-    import tempfile
-    data_dir = os.getenv("NLTK_DATA", os.path.join(tempfile.gettempdir(), "nltk_data"))
-    if data_dir not in nltk.data.path:
-        nltk.data.path.insert(0, data_dir)
-
-    resources = [
-        ("corpora/stopwords", "stopwords"),
-        ("tokenizers/punkt", "punkt"),
-        ("tokenizers/punkt_tab", "punkt_tab"),
-        ("corpora/wordnet", "wordnet"),
-        ("corpora/omw-1.4", "omw-1.4"),
-    ]
-
-    for path_key, pkg in resources:
-        try:
-            nltk.data.find(path_key)
-        except LookupError:
-            try:
-                nltk.download(pkg, download_dir=data_dir, quiet=True)
-            except Exception as exc:
-                logger.warning("Could not download NLTK resource '%s': %s", pkg, exc)
-
-    # Reload wordnet corpus to avoid stale LazyCorpusLoader state
+    # In production (Docker), NLTK data is pre-downloaded via the Dockerfile.
+    # In local development, the user should run:
+    # python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet'); nltk.download('omw-1.4')"
+    
+    # We still need to ensure the wordnet corpus is loaded to avoid the stale LazyCorpusLoader state bug
     try:
         from nltk.corpus import wordnet as wn
         if hasattr(wn, '_LazyCorpusLoader__args') or not hasattr(wn, '_morphy'):
