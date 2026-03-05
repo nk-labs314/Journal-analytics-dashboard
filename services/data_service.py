@@ -79,6 +79,7 @@ def get_recent_mood(user_id, limit=30):
         engine,
         params={
             "user_id": user_id,
+            "excluded_date": "2023-01-01",
             "limit": limit
         }
     )

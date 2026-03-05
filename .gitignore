@@ -2,4 +2,8 @@
 __pycache__/
 *.pyc
 mental_health.db
+mental_health.db-journal
+*.db-journal
+*.db-wal
+*.db-shm
 

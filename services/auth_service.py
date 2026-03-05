@@ -32,7 +32,7 @@ def verify_user(username, password):
 
     query = text("""
         SELECT user_id, password_hash
-        FROM AuthUsers
+        FROM AuthUsers  
         WHERE username = :username
     """)
 
