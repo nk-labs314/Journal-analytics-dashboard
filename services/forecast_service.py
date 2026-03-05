@@ -1,9 +1,10 @@
 import os
 import joblib
 import pandas as pd
-
+import logging
 from models.feature_builder import build_features
 
+logger = logging.getLogger(__name__)
 ARTIFACT_PATH = os.path.join("artifacts", "ridge_multi_output.pkl")
 
 
@@ -18,15 +19,15 @@ class ForecastService:
     def load_model(self):
         if not os.path.exists(ARTIFACT_PATH):
             raise FileNotFoundError("Forecast model artifact not found.")
-
         artifact = joblib.load(ARTIFACT_PATH)
         self.model = artifact["model"]
         self.feature_columns = artifact["feature_columns"]
         self.horizons = artifact["horizons"]
+        logger.info("Forecast model loaded successfully")
 
     def predict(self, user_df):
-
         if user_df.empty:
+            logger.warning("predict() called with empty DataFrame")
             return None
 
         # Sort chronologically using DB timestamp

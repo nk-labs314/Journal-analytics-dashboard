@@ -1,26 +1,109 @@
 <!DOCTYPE html>
+
 <html>
 <head>
-    <title>Forecast</title>
+    <title>Insights</title>
+
+```
+<style>
+    .container {
+        max-width: 800px;
+    }
+
+    textarea {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        margin-bottom: 15px;
+        font-size: 14px;
+    }
+
+    button {
+        padding: 8px 14px;
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+    .result-box {
+        margin-top: 25px;
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+    }
+
+    .signals {
+        margin-top: 15px;
+    }
+
+    ul {
+        padding-left: 20px;
+    }
+</style>
+```
+
 </head>
+
 <body>
-    <h1>Mood Forecast</h1>
 
-    {% if predictions %}
-        <ul>
-            <li>3-Day Forecast: {{ predictions["3"] | round(2) }}</li>
-            <li>7-Day Forecast: {{ predictions["7"] | round(2) }}</li>
-            <li>14-Day Forecast: {{ predictions["14"] | round(2) }}</li>
-        </ul>
-    {% else %}
-        <p>Not enough data to generate forecast.</p>
-    {% endif %}
+<h1>Text Mood Insights</h1>
 
-    <div style="margin-bottom:20px;">
+<div class="container">
+
+<form method="POST">
+
+```
+<label><strong>Analyze Text</strong></label>
+
+<textarea name="text" rows="6" placeholder="Write something to analyze..."></textarea>
+
+<br>
+
+<button type="submit">Analyze</button>
+```
+
+</form>
+
+{% if result %}
+
+<div class="result-box">
+
+<h2>Predicted Mood: {{ result }}</h2>
+
+<div class="signals">
+<h3>Positive Signals</h3>
+
+<ul>
+{% for word, score in contributions if score > 0 %}
+<li>{{ word }} : +{{ "%.2f"|format(score) }}</li>
+{% endfor %}
+</ul>
+
+</div>
+
+<div class="signals">
+
+<h3>Negative Signals</h3>
+
+<ul>
+{% for word, score in contributions if score < 0 %}
+<li>{{ word }} : {{ "%.2f"|format(score) }}</li>
+{% endfor %}
+</ul>
+
+</div>
+
+</div>
+
+{% endif %}
+
+</div>
+
+<div style="margin-top:30px;">
     <a href="{{ url_for('dashboard') }}">Dashboard</a> |
     <a href="{{ url_for('journals') }}">Journals</a> |
-    <a href="{{ url_for('forecast') }}">Forecast</a>
+    <a href="{{ url_for('forecast') }}">Forecast</a> |
     <a href="{{ url_for('insights') }}">Insights</a>
 </div>
+
 </body>
 </html>

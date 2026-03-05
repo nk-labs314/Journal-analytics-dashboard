@@ -31,10 +31,12 @@ clean_journal_mvp/
 │   ├── analytics_service.py       # Dashboard computation pipeline
 │   ├── data_service.py            # DB read/write layer (SQLAlchemy)
 │   ├── forecast_service.py        # Model loading and live inference
-│   └── insight_service.py         # Sentiment, trend detection, behaviour alerts
+│   ├── insight_service.py         # Sentiment, trend detection, behaviour alerts
+│   └── lexicon_service.py         # Lexicon artifact loading and text analysis
 │
 ├── training/
-│   └── train_forecast.py          # Ridge multi-output training + artifact export
+│   ├── train_forecast.py          # Ridge multi-output training + artifact export
+│   └── train_lexicon.py           # Global lexicon training + artifact export
 │
 ├── evaluation/
 │   ├── evaluate_forecasting.py    # MAE vs rolling baseline per horizon
@@ -46,6 +48,7 @@ clean_journal_mvp/
 │   └── data_generator.py
 │
 ├── artifacts/
+│   ├── global_lexicon.pkl         # Trained global lexicon artifact
 │   └── ridge_multi_output.pkl     # Serialised trained model
 │
 ├── data/
@@ -55,6 +58,11 @@ clean_journal_mvp/
 │   └── experiment_logger.py       # CSV-based experiment tracker
 │
 ├── templates/                     # Jinja2 HTML templates
+│   ├── dashboard.html
+│   ├── forecast.html
+│   ├── index.html
+│   ├── insights.html
+│   └── journals.html
 └── static/js/charts.js            # Chart.js visualisations
 ```
 
@@ -312,6 +320,7 @@ All runs are logged automatically to `experiments_log.csv` via `utils/experiment
 | `/journals` | GET | Past journal entries |
 | `/forecast` | GET | 3/7/14-day mood forecast |
 | `/health` | GET | Health check (DB + model status) |
+|`/insights`| GET, POST | Lexicon mood analysis with word contributions|
 
 ---
 
@@ -320,7 +329,6 @@ All runs are logged automatically to `experiments_log.csv` via `utils/experiment
 - [ ] Authentication — currently single hardcoded `user_id=1`
 - [ ] Chatbot module — scaffolded in `main.py`, not yet integrated
 - [ ] SQLite not suitable for multi-user deployment — use `DATABASE_URL` to swap to PostgreSQL
-- [ ] Lexicon model rebuilds from DB on every request — should be cached
 - [ ] Add `python-dotenv` for `.env` file support
 - [ ] Lexicon cold-start: new users with no history fall back entirely to global prior
 

@@ -135,16 +135,17 @@ def forecast():
 
 @app.route("/insights", methods=["GET", "POST"])
 def insights():
-
     result = None
     contributions = []
 
     if request.method == "POST":
-
         text = request.form["text"]
+        user_id = Default_User_Id
 
-        prediction, contributions = lexicon_service.analyze_text(text)
+        # Pass user's journal history so personalisation kicks in
+        user_df = data_service.get_all_journals(user_id)
 
+        prediction, contributions = lexicon_service.analyze_text(text, user_df)
         result = round(prediction, 2)
 
     return render_template(
@@ -156,64 +157,32 @@ def insights():
 @app.route("/health")
 def health():
     try:
-        # --- DB CHECK ---
         engine = get_engine()
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-
         db_status = "ok"
-
     except Exception:
         return {"status": "db_error"}, 500
 
-    # --- MODEL CHECK ---
     try:
         model_status = "loaded" if forecast_service.model else "missing"
     except Exception:
         model_status = "error"
 
+    try:
+        lexicon_status = "loaded" if lexicon_service.global_lexicon else "missing"
+    except Exception:
+        lexicon_status = "error"
+
     return {
         "status": "ok",
         "database": db_status,
-        "forecast_model": model_status
+        "forecast_model": model_status,
+        "lexicon_model": lexicon_status
     }, 200
 
 
-#sys.path.append(os.path.join(os.getcwd(), "Mental-health-Chatbot"))
-#def detect_language(user_input):
-   # try:
-       # if len(user_input.split()) < 5:
-       #     return 'en'
-       # detected_lang = detect(user_input)
-        #if detected_lang not in ['en']:
-       #     return 'en'
-       # return detected_lang
-   # except Exception as e:
-       # print(f"[ERROR] Language detection failed: {str(e)}")
-        #return 'en'
 
-#def chat_response(user_input):
- #   if not user_input.strip():
-  #      return "Please enter a message."
-   # try:
-    #    response_text = specialized_chatbot_response(user_input)
-     #   return response_text
-    #except Exception as e:
-      #  print(f"[ERROR] Chatbot generation failed: {str(e)}")
-       # return "I'm having trouble processing that. Could you rephrase?"
-
-#@app.route('/chat', methods=['GET', 'POST'])
-#def chat():
- #   response = None
-  #  user_input = ""
-   # if request.method == 'POST':
-    #    user_input = request.form.get('message', '').strip()
-     #   if user_input:
-      #      detected_lang = detect_language(user_input)
-       #     print("detected english")
-        #    response = chat_response(user_input)
-        #return f'<div id="bot-response">{response}</div>'
-    #return render_template('chat.html', response=response, user_input=user_input)
 if Config.DEBUG:
     init_db()
 
