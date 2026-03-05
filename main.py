@@ -105,7 +105,13 @@ def register():
             flash("Username and password are required.")
             return redirect(url_for("register"))
 
-        created = auth_service.create_user(username, password)
+        try:
+            created = auth_service.create_user(username, password)
+        except Exception:
+            logger.exception("Registration failed due to database error")
+            flash("Registration failed. Please try again in a moment.")
+            return redirect(url_for("register"))
+
         if not created:
             flash("Username already exists.")
             return redirect(url_for("register"))
@@ -128,7 +134,13 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
-        user_id = auth_service.verify_user(username, password)
+        try:
+            user_id = auth_service.verify_user(username, password)
+        except Exception:
+            logger.exception("Login failed due to database error")
+            flash("Login failed. Please try again in a moment.")
+            return redirect(url_for("login"))
+
         if user_id is None:
             flash("Invalid username or password.")
             return redirect(url_for("login"))
@@ -274,11 +286,13 @@ def health():
 
 
 
-if Config.DEBUG:
-    init_db()
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+try:
+    init_db()
+except Exception:
+    logger.exception("Database initialization failed")
 
 
 @app.errorhandler(500)

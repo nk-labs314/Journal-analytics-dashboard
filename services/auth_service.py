@@ -1,4 +1,5 @@
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 from services.data_service import get_engine
 
@@ -22,7 +23,7 @@ def create_user(username, password):
                 },
             )
         return True
-    except Exception:
+    except IntegrityError:
         return False
 
 
