@@ -10,11 +10,13 @@ from sqlalchemy import text
 from services.data_service import get_engine
 import logging
 from services.forecast_service import ForecastService
-from services.data_service import get_all_journals  # assuming this exists
+from services.data_service import get_all_journals  
+from services.lexicon_service import LexiconService
 
 
 Default_User_Id = 1
 forecast_service = ForecastService()
+lexicon_service = LexiconService()
 
 def init_db():
     engine = get_engine()
@@ -129,6 +131,26 @@ def forecast():
     return render_template(
         "forecast.html",
         predictions=predictions
+    )
+
+@app.route("/insights", methods=["GET", "POST"])
+def insights():
+
+    result = None
+    contributions = []
+
+    if request.method == "POST":
+
+        text = request.form["text"]
+
+        prediction, contributions = lexicon_service.analyze_text(text)
+
+        result = round(prediction, 2)
+
+    return render_template(
+        "insights.html",
+        result=result,
+        contributions=contributions
     )
 
 @app.route("/health")

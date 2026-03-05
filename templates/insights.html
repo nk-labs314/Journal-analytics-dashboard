@@ -1,0 +1,32 @@
+<h1>Text Mood Insights</h1>
+
+<form method="POST">
+    <textarea name="text" rows="6" cols="50"></textarea>
+    <br>
+    <button type="submit">Analyze</button>
+</form>
+
+{% if result %}
+<h2>Predicted Mood: {{ result }}</h2>
+
+<h3>Positive Signals</h3>
+<ul>
+{% for word, score in contributions if score > 0 %}
+    <li>{{ word }} : +{{ "%.2f"|format(score) }}</li>
+{% endfor %}
+</ul>
+
+<h3>Negative Signals</h3>
+<ul>
+{% for word, score in contributions if score < 0 %}
+    <li>{{ word }} : {{ "%.2f"|format(score) }}</li>
+{% endfor %}
+</ul>
+
+{% endif %}
+  <div style="margin-bottom:20px;">
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> |
+    <a href="{{ url_for('journals') }}">Journals</a> |
+    <a href="{{ url_for('forecast') }}">Forecast</a>
+    <a href="{{ url_for('insights') }}">Insights</a>
+</div>

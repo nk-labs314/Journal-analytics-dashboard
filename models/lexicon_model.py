@@ -122,7 +122,7 @@ def predict_mood_from_text(
     global_mean,
     k=10
 ):
-    words = tokenize(text)
+    words = set(tokenize(text))
 
     scores = []
     contributions = []
