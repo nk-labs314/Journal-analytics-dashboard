@@ -9,5 +9,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet'); nltk.download('omw-1.4'); nltk.download('punkt_tab')"
 COPY . .
 
-EXPOSE 5000
-CMD ["gunicorn", "main:app", "--bind", "0.0.0.0:5000", "--workers", "2"]
+EXPOSE 7860
+CMD ["gunicorn", "main:app", "--bind", "0.0.0.0:7860", "--workers", "2"]
