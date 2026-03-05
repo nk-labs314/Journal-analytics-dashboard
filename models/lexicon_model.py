@@ -1,8 +1,8 @@
 # lexicon_engine.py
 
-import re
+import os
+import logging
 import numpy as np
-import pandas as pd
 from collections import defaultdict
 
 
@@ -11,22 +11,71 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
+logger = logging.getLogger(__name__)
 
 # Initialize once
 lemmatizer = WordNetLemmatizer()
-stop_words = set(stopwords.words("english"))
+stop_words = None
+
+
+def _prepare_nltk_data():
+    # Render instances may not have corpora preinstalled; use a writable path.
+    data_dir = os.getenv("NLTK_DATA", "/tmp/nltk_data")
+    if data_dir not in nltk.data.path:
+        nltk.data.path.insert(0, data_dir)
+
+    resources = [
+        ("corpora/stopwords", "stopwords"),
+        ("tokenizers/punkt", "punkt"),
+        ("tokenizers/punkt_tab", "punkt_tab"),
+        ("corpora/wordnet", "wordnet"),
+        ("corpora/omw-1.4", "omw-1.4"),
+    ]
+
+    for path_key, pkg in resources:
+        try:
+            nltk.data.find(path_key)
+        except LookupError:
+            try:
+                nltk.download(pkg, download_dir=data_dir, quiet=True)
+            except Exception as exc:
+                logger.warning("Could not download NLTK resource '%s': %s", pkg, exc)
+
+
+def _get_stopwords():
+    global stop_words
+    if stop_words is not None:
+        return stop_words
+
+    _prepare_nltk_data()
+    try:
+        stop_words = set(stopwords.words("english"))
+    except LookupError:
+        logger.warning("NLTK stopwords unavailable; continuing with empty stopword set.")
+        stop_words = set()
+    return stop_words
 
 
 # -----------------------------
 # NLP Tokenizer
 # -----------------------------
 def tokenize(text):
-    tokens = word_tokenize(text.lower())
+    active_stop_words = _get_stopwords()
+
+    try:
+        tokens = word_tokenize(text.lower())
+    except LookupError:
+        _prepare_nltk_data()
+        try:
+            tokens = word_tokenize(text.lower())
+        except LookupError:
+            logger.warning("NLTK punkt unavailable; using regex fallback tokenizer.")
+            tokens = text.lower().split()
 
     cleaned = []
 
     for token in tokens:
-        if token.isalpha() and token not in stop_words:
+        if token.isalpha() and token not in active_stop_words:
             lemma = lemmatizer.lemmatize(token)
             cleaned.append(lemma)
 
