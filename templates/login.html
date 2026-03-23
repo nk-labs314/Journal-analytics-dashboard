@@ -20,7 +20,7 @@
         {% endif %}
         {% endwith %}
 
-        <form method="POST">
+        <form method="POST" action="{{ request.url }}">
             <div class="form-group">
                 <label>Username</label>
                 <input type="text" name="username" class="form-control" placeholder="Enter your username" required>
