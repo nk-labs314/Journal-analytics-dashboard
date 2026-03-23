@@ -33,7 +33,7 @@ def init_db():
     engine = get_engine()
     auth_users_sql = """
         CREATE TABLE IF NOT EXISTS AuthUsers (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_   ,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL
         )
@@ -50,7 +50,7 @@ def init_db():
 
     entry_embeddings_sql = """
         CREATE TABLE IF NOT EXISTS EntryEmbeddings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             user_id INTEGER NOT NULL,
             log_id INTEGER NOT NULL,
             embedding BYTEA NOT NULL,
@@ -61,7 +61,7 @@ def init_db():
     if engine.dialect.name == "sqlite":
         entry_embeddings_sql = """
             CREATE TABLE IF NOT EXISTS EntryEmbeddings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL,
                 log_id INTEGER NOT NULL,
                 embedding BLOB NOT NULL,
