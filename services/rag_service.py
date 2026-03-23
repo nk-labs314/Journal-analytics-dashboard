@@ -13,7 +13,7 @@ class RAGService:
 
         # Use HF Inference API with a model strictly supported on the free Serverless Chat endpoint
         self.client = InferenceClient(
-            model="meta-llama/Llama-3.2-3B-Instruct",
+            model="mistralai/Mistral-7B-Instruct-v0.2",
             token=hf_api_key if hf_api_key else None
         )
         logger.info("RAG service initialised with HF Inference API")
