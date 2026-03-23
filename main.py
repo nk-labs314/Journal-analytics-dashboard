@@ -19,8 +19,7 @@ from services.lexicon_service import LexiconService
 from services import auth_service
 from services.embedding_service import EmbeddingService
 from services.rag_service import RAGService
-from werkzeug.middleware.proxy_fix import ProxyFix
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -117,9 +116,12 @@ def login_required(view_func):
     return wrapper
 
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.static_folder = 'static'
 app.config.from_object(Config)
+app.config.update(
+    SESSION_COOKIE_SAMESITE="None",
+    SESSION_COOKIE_SECURE=True
+)
 app.secret_key = app.config["SECRET_KEY"]
 
 limiter = Limiter(
