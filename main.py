@@ -71,7 +71,7 @@ def init_db():
 
     with engine.begin() as conn:
         conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS JournalUsers (
+            CREATE TABLE IF NOT EXISTS MoodUsers (
                 user_id SERIAL PRIMARY KEY,
                 age INTEGER,
                 gender TEXT,
