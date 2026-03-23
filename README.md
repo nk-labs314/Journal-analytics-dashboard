@@ -1,3 +1,14 @@
+---
+title: Journal Analytics Dashboard
+emoji: 📔
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
+
 # MoodLens — ML-Powered Mental Health Journal & Analytics
 
 A full-stack, machine learning-driven personal analytics platform. **MoodLens** goes beyond standard journaling by applying natural language processing (NLP), regression modeling, and Retrieval-Augmented Generation (RAG) to uncover hidden patterns in personal behavioral data and forecast future mood trajectories.
