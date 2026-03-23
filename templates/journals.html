@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Journals — MoodLens{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📝 Journal Entries</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('home') }}" class="btn btn-primary">✨ New Entry</a>
+    </div>
+</div>
+
+{% if journals %}
+{% for journal in journals %}
+<div class="journal-card">
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span class="journal-date">📅 {{ journal.date }}</span>
+        <span
+            class="journal-mood badge {% if journal.mood_score >= 7 %}badge-success{% elif journal.mood_score >= 4 %}badge-warning{% else %}badge-danger{% endif %}">
+            Mood: {{ journal.mood_score }}/10
+        </span>
+    </div>
+    <div class="journal-text">{{ journal.journal_entry }}</div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <h3>No journal entries yet</h3>
+        <p>Start by logging your first entry on the Home page.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
