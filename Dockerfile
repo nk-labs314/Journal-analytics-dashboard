@@ -10,4 +10,4 @@ RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); 
 COPY . .
 
 EXPOSE 7860
-CMD ["gunicorn", "main:app", "--bind", "0.0.0.0:7860", "--workers", "2"]
+CMD ["gunicorn", "main:app", "--bind", "0.0.0.0:7860", "--workers", "1"]
