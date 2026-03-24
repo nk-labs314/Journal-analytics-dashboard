@@ -14,5 +14,5 @@ sentence-transformers
 huggingface-hub
 werkzeug
 Flask-Limiter
-
+openai
 python-dotenv

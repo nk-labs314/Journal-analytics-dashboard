@@ -1,7 +1,8 @@
 import logging
 import numpy as np
 from services import data_service
-from huggingface_hub import InferenceClient
+from openai import OpenAI
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -12,11 +13,11 @@ class RAGService:
         self.embedding_service = embedding_service
 
         # Use HF Inference API with a model strictly supported on the free Serverless Chat endpoint
-        self.client = InferenceClient(
-            model="google/gemma-2b-it",
-            token=hf_api_key if hf_api_key else None
+        self.client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.getenv("OPENROUTER_API_KEY"),
         )
-        logger.info("RAG service initialised with HF Inference API")
+        logger.info("RAG service initialised with OpenRouter")
 
     def retrieve(self, query: str, user_id: int, top_k: int = 5) -> list:
         """Embed query and retrieve the most similar journal entries for the user."""
@@ -98,11 +99,11 @@ Mood forecast:
         ]
 
         try:
-            response = self.client.chat_completion(
-                messages,
-                max_tokens=500,
+            response = self.client.chat.completions.create(
+                model="mistralai/mistral-7b-instruct",
+                messages=messages,
                 temperature=0.7,
-                seed=42
+                max_tokens=500,
             )
             return response.choices[0].message.content.strip()
 
