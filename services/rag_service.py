@@ -100,7 +100,7 @@ Mood forecast:
 
         try:
             response = self.client.chat.completions.create(
-                model="mistralai/mistral-7b-instruct:free",
+                model="openai/gpt-3.5-turbo",
                 messages=messages,
                 temperature=0.7,
                 max_tokens=500,
