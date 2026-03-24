@@ -1,4 +1,4 @@
----
+<!--
 title: Journal Analytics Dashboard
 emoji: 📔
 colorFrom: blue
@@ -6,130 +6,286 @@ colorTo: purple
 sdk: docker
 app_port: 7860
 pinned: false
----
+-->
 
+# Journal Analytics Dashboard
 
-# MoodLens — ML-Powered Mental Health Journal & Analytics
+An AI-powered journaling system that analyzes behavioral patterns, predicts future mood trends, and generates personalized insights using a Retrieval-Augmented Generation (RAG) pipeline.
 
-A full-stack, machine learning-driven personal analytics platform. **MoodLens** goes beyond standard journaling by applying natural language processing (NLP), regression modeling, and Retrieval-Augmented Generation (RAG) to uncover hidden patterns in personal behavioral data and forecast future mood trajectories.
-
-![MoodLens Dashboard](https://via.placeholder.com/800x400?text=MoodLens+Dashboard)
-
----
-
-## 🚀 Technical Highlights for Recruiters
-
-This project was built to demonstrate end-to-end ML engineering capabilities, specifically focusing on combining traditional statistical learning with modern LLM workflows in a production-ready web application.
-
-- **Hybrid Bayesian NLP**: Designed a custom lexicon engine that learns user-specific word associations with mood, applying empirical Bayesian shrinkage to smooth predictions against a global population baseline.
-- **Time Series Forecasting**: Engineered rolling, lagged, and cyclical temporal features (sin/cos encoding of 60-day cycles) to train a Multi-Output Ridge Regression model predicting mood 3, 7, and 14 days into the future.
-- **RAG Architecture**: Integrated Hugging Face's `sentence-transformers` for dense vector embeddings of journal entries, performing cosine-similarity retrieval to ground an LLM (Mistral-7B via Inference API) in the user's historical context.
-- **Production Infrastructure**: Built with Flask and SQLAlchemy, handling session caching, database abstraction (SQLite/PostgreSQL compatible via Supabase), and Dockerized for seamless Render deployment with pre-baked model weights to minimize cold-start latency.
+This project combines traditional machine learning (regression, feature engineering) with modern LLM-based reasoning to build a complete end-to-end analytics system.
 
 ---
 
-## 🧠 Machine Learning Architecture & Mathematics
+## Features
 
-### 1. Hybrid Bayesian Lexicon (NLP)
-Instead of relying purely on pre-trained sentiment models like VADER, the system builds its own word-to-mood association dictionary from journal history.
+* User Authentication
+  Secure session-based login system built with Flask
 
-For each word $w$, a **centered mood score** is computed against the corpus mean $\bar{\mu}$:
-$$ \text{score}_{\text{global}}(w) = \frac{1}{|D_w|} \sum_{d \in D_w} \text{mood}_d - \bar{\mu} $$
+* Journal Logging
+  Tracks mood, behavioral signals (sleep, activity, social interaction), and text entries
 
-To personalize the model without overfitting small user datasets, a **count-based shrinkage weight** $\lambda_w$ (with smoothing constant $k = 10$) acts as a James-Stein estimator, blending the user's specific vocabulary with the global prior:
-$$ \lambda_w = \frac{n_u(w)}{n_u(w) + k} $$
-$$ \text{score}_{\text{hybrid}}(w) = \lambda_w \cdot \text{score}_{\text{user}}(w) + (1 - \lambda_w) \cdot \text{score}_{\text{global}}(w) $$
+* Analytics Dashboard
+  Computes trends, correlations, and behavioral insights
 
-When a user writes a new journal entry, the text is lemmatized via NLTK, and the hybrid scores of the constituent words are averaged to predict the absolute mood score on a 1–10 scale.
+* Forecasting Engine
+  Predicts future mood using time-series features and regression
 
-### 2. Multi-Horizon Mood Forecasting (Regression)
-A Ridge regression model predicts rolling average mood over the next $h \in \{3, 7, 14\}$ days.
+* Insight Engine
+  Custom lexicon-based NLP system with user-specific adaptation
 
-**Feature Engineering:**
-At each time step $t$, the system extracts:
-- Lags: $m_{t-1}, m_{t-2}$
-- Rolling Averages: $\frac{1}{w}\sum_{i=0}^{w-1} m_{t-i}$ for $w \in \{3, 7, 14\}$
-- Cyclical Time Encodings: $\sin(\frac{2\pi \cdot t}{60})$ and $\cos(\frac{2\pi \cdot t}{60})$ to capture weekly/monthly periodicity.
-- Text Signal: The output scalar of the NLP Lexicon model.
+* RAG-based Chat Assistant
+  Retrieves relevant past entries and generates grounded responses using an LLM
 
-**Model:**
-Ridge regression is trained jointly on multi-output targets $Y \in \mathbb{R}^{N \times 3}$:
-$$ \hat{Y} = X\hat{B}, \quad \hat{B} = \arg\min_B \|Y - XB\|_F^2 + \alpha \|B\|_F^2 $$
+---
+
+## System Architecture
+
+```
+Frontend (HTML Templates)
+        ↓
+Flask Backend (Routes + Services)
+        ↓
+-----------------------------------
+| Supabase (PostgreSQL Database) |
+-----------------------------------
+        ↓
+-----------------------------------
+| Embeddings: SentenceTransformers |
+| LLM: OpenRouter (GPT-3.5 Turbo)  |
+-----------------------------------
+```
+
+---
+
+## Architecture Diagram
+
+```
+                ┌────────────────────┐
+                │     Frontend       │
+                │ (HTML Templates)   │
+                └─────────┬──────────┘
+                          │
+                          ▼
+                ┌────────────────────┐
+                │    Flask Backend   │
+                │  (Routes + Logic)  │
+                └─────────┬──────────┘
+                          │
+        ┌─────────────────┼─────────────────┐
+        ▼                 ▼                 ▼
+┌──────────────┐  ┌────────────────┐  ┌────────────────────┐
+│  Supabase DB │  │ Embedding Model│  │   OpenRouter LLM   │
+│ (PostgreSQL) │  │ MiniLM-L6-v2   │  │   GPT-3.5 Turbo    │
+└──────────────┘  └────────────────┘  └────────────────────┘
+        │
+        ▼
+┌────────────────────┐
+│ Stored Embeddings  │
+│ + Journal Entries  │
+└────────────────────┘
+```
+
+---
+
+## RAG Pipeline (How it Works)
+
+1. User submits a query
+2. Query is converted into an embedding vector
+3. System retrieves top-k similar journal entries
+4. Retrieved entries + analytics + forecast are combined into context
+5. LLM generates a grounded, personalized response
+
+This ensures:
+
+* responses are based on user history
+* reduced hallucination
+* context-aware insights
+
+---
+
+## Machine Learning Design
+
+### 1. Hybrid Lexicon-Based NLP
+
+The system builds a custom word-to-mood mapping.
+
+For each word w:
+
+score_global(w) = average mood of entries containing w − global mean
+
+To avoid overfitting, a shrinkage factor is applied:
+
+λ_w = n_u(w) / (n_u(w) + k)
+
+Final score:
+
+score_hybrid(w) = λ_w · score_user(w) + (1 − λ_w) · score_global(w)
+
+This allows:
+- personalization of vocabulary  
+- stability for low-frequency words  
+
+### 2. Mood Forecasting (Ridge Regression)
+
+Future mood is predicted using a multi-output regression model:
+
+Ŷ = X·B
+
+The model is trained using ridge regularization:
+
+min ||Y - X·B||² + α||B||²
+
+Features include:
+- lag values (m_t-1, m_t-2)
+- rolling averages (3, 7, 14 days)
+- cyclical encoding (sin, cos)
+- NLP-derived sentiment signals
+
+This design:
+- handles noisy behavioral data  
+- avoids overfitting  
+- enables multi-horizon forecasting  
 
 ### 3. Retrieval-Augmented Generation (RAG)
-To provide an interactive "AI Therapist" experience, the system uses semantic search over the user's journal history.
-- **Embedding Generation**: Uses `all-MiniLM-L6-v2` to embed journal text into 384-dimensional dense vectors upon submission.
-- **Retrieval**: Computes dot-product (cosine similarity on normalized vectors) to find the top $K$ most contextually relevant past entries.
-- **Generation**: Formats a zero-shot prompt injecting the retrieved context into Mistral-7B (via Hugging Face API) to generate grounded, personalized insights.
+
+* Embeddings generated using MiniLM (384-d vectors)
+* Cosine similarity used for retrieval
+* Context injected into LLM prompt
+
+This ensures:
+
+* personalized responses
+* grounding in historical data
+* reduced hallucination
 
 ---
 
-## 🛠️ Tech Stack & Implementation Details
+## Tech Stack
 
-| Component | Technologies Used |
-|---|---|
-| **Backend Framework** | Python 3.12, Flask, Gunicorn |
-| **Database ORM** | SQLAlchemy (Compatible with SQLite, PostgreSQL/Supabase) |
-| **Machine Learning** | scikit-learn (Ridge Regression), pandas, numpy, joblib |
-| **NLP & LLMs** | `sentence-transformers`, `huggingface-hub`, NLTK, VADER |
-| **Frontend UI** | HTML5, Vanilla CSS (Custom Card Design System), Jinja2, Chart.js |
-| **Deployment** | Docker, Render |
+* Backend: Flask, SQLAlchemy
+* Database: Supabase (PostgreSQL)
+* Machine Learning:
 
-### Codebase Organization
-
-- `models/` - Core mathematical logic (Feature Builder, Lexicon engine, Forecasting mathematics)
-- `services/` - Abstraction layer handling business logic, database transactions, and model inference (`rag_service.py`, `lexicon_service.py`, etc.)
-- `training/` - Offline scripts for extracting data, training the Ridge models, generating the hybrid lexicon, and exporting `joblib` artifacts.
-- `main.py` - Flask routing and API endpoint definitions.
+  * scikit-learn (Ridge Regression)
+  * SentenceTransformers (embeddings)
+* LLM: OpenRouter (GPT-3.5 Turbo)
+* Deployment: Hugging Face Spaces (Docker)
 
 ---
 
-## ⚙️ Running the Project Locally
+## Code Structure
 
-### Prerequisites
-- Python 3.12+
+```
+main.py        → Flask routes and entry point  
+services/      → business logic (RAG, analytics, auth, embeddings)  
+models/        → ML logic (forecasting, lexicon scoring)  
+training/      → offline model training scripts  
+```
 
-### Setup
+---
+
+## Key Design Decisions
+
+### Custom Backend over BaaS
+
+A Flask backend was implemented to:
+
+* maintain full control over logic
+* demonstrate backend engineering capability
+
+---
+
+### Hybrid AI Architecture
+
+* Embeddings computed locally
+* LLM handled via external API
+
+This balances:
+
+* cost
+* performance
+* reliability
+
+---
+
+### RAG for Personalization
+
+Combines:
+
+* retrieved journal entries
+* analytics signals
+* forecast outputs
+
+into a unified prompt for the LLM
+
+---
+
+## Key Engineering Challenges
+
+### Session Persistence in Deployment
+
+Resolved cookie/session issues in a proxied environment (Hugging Face Spaces).
+
+---
+
+### LLM Provider Limitations
+
+Switched from Hugging Face inference APIs to OpenRouter due to model/provider constraints.
+
+---
+
+### Context Construction for RAG
+
+Designed a structured pipeline combining multiple data sources into a coherent prompt.
+
+---
+
+## Results
+
+* Retrieves relevant historical entries using embeddings
+* Generates context-aware, grounded responses
+* Maintains user-level data isolation via backend logic
+* End-to-end system functioning across multiple components
+
+---
+
+## Setup
+
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd journal_mvp
-
-# Create virtual environment and install dependencies
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+git clone https://github.com/nk-labs314/Journal-analytics-dashboard.git
+cd Journal-analytics-dashboard
 pip install -r requirements.txt
-
-# Create an environment file
-touch .env
 ```
 
-Add your API keys to the `.env` file (the app defaults to local SQLite if no DB URL is provided):
-```env
-# Optional: Set to your Supabase PostgreSQL connection string
-# DATABASE_URL=postgresql://...
+---
 
-# Required for RAG Chat: Your Hugging Face Inference API token
-HUGGINGFACE_API_KEY=hf_your_token_here
+## Environment Variables
 
-# Required for Flask Sessions
-SECRET_KEY=your-random-secret-key-123
+```
+SECRET_KEY=your_secret_key
+OPENROUTER_API_KEY=your_api_key
+DATABASE_URL=your_supabase_database_url
 ```
 
-### Run
+---
+
+## Run Locally
+
 ```bash
 python main.py
 ```
-Access the application at `http://127.0.0.1:5000`.
 
 ---
 
-## 🚢 Production Deployment
+## Future Improvements
 
-The repository is configured for immediate deployment via Render. No secrets or model artifacts are tracked in version control (`.gitignore` is strictly enforced). 
+* Add RLS + Supabase Auth integration
+* Improve retrieval ranking in RAG pipeline
+* Add caching for LLM responses
+* Scale backend architecture
 
-To deploy using Docker on Render:
-1. Connect the GitHub repository to Render as a **Docker** deployment.
-2. The provided `Dockerfile` will automatically pull the `python:3.12-slim` image, install dependencies, and pre-bake the Hugging Face sentence-transformer model to prevent cold-start timeouts.
-3. Add the `DATABASE_URL` (Supabase), `HUGGINGFACE_API_KEY`, and `SECRET_KEY` into Render's Environment Variables dashboard.
-4. Deploy. The app runs via `gunicorn main:app --bind 0.0.0.0:5000`.
+---
+
+## Author
+
+Nandan Kailasanath
