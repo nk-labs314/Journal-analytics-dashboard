@@ -114,8 +114,8 @@ def reset_demo_account():
                 }
             )
 
-            embedding = model.encode(journal, normalize_embeddings=True)
-            embedding_bytes = embedding.astype("float32").tobytes()
+            
+            embedding_bytes = None
 
             conn.execute(
                 text("""
