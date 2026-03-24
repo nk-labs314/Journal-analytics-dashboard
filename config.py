@@ -18,3 +18,5 @@ class Config:
 
     # Hugging Face API (for RAG)
     HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "")
+
+    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")

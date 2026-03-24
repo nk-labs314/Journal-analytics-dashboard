@@ -7,3 +7,4 @@ mental_health.db-journal
 *.db-wal
 *.db-shm
 .env
+generate_demo_data.py

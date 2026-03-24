@@ -19,6 +19,8 @@ from services.lexicon_service import LexiconService
 from services import auth_service
 from services.embedding_service import EmbeddingService
 from services.rag_service import RAGService
+from services.demo_service import reset_demo_account
+DEMO_USERNAME = "demo_acc"
 
 
 logging.basicConfig(level=logging.INFO)
@@ -191,6 +193,12 @@ def login():
         if user_id is None:
             flash("Invalid username or password.")
             return redirect(url_for("login"))
+
+        if username == DEMO_USERNAME:
+            try:
+                reset_demo_account()
+            except Exception:
+                logger.exception("Demo reset failed")
 
         session["user_id"] = user_id
         session["username"] = username
