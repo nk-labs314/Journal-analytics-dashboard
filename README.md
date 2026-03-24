@@ -7,7 +7,7 @@ sdk: docker
 app_port: 7860
 pinned: false
 ---
-
+---
 # Journal Analytics Dashboard
 
 An AI-powered journaling system that analyzes behavioral patterns, predicts future mood trends, and generates personalized insights using a Retrieval-Augmented Generation (RAG) pipeline.
@@ -285,6 +285,18 @@ python main.py
 * Scale backend architecture
 
 ---
+## Deployment
+
+The application is deployed on Hugging Face Spaces and runs as a containerized Flask service.
+https://huggingface.co/spaces/MetHJ/journal-analytics-dashboard
+
+---
+
+## Notes
+The configuration block at the top of this README is required for Hugging Face Spaces deployment.
+
+---
+
 
 ## Author
 
