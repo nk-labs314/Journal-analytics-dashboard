@@ -176,6 +176,7 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
 def login():
+    print("LOGIN START")
     if "user_id" in session:
         return redirect(url_for("home"))
 
@@ -184,13 +185,17 @@ def login():
         password = request.form.get("password", "")
 
         try:
+            print("CALLING verify_user")
             user_id = auth_service.verify_user(username, password)
+            print("verify_user RETURNED:", user_id)
         except Exception:
+            print("VERIFY USER ERROR:", e)
             logger.exception("Login failed due to database error")
             flash("Login failed. Please try again in a moment.")
             return redirect(url_for("login"))
 
         if user_id is None:
+            print("INVALID USER")
             flash("Invalid username or password.")
             return redirect(url_for("login"))
 
@@ -199,10 +204,11 @@ def login():
         #        reset_demo_account()
         #    except Exception:
         #        logger.exception("Demo reset failed")
-
+        print("SETTING SESSION")
         session["user_id"] = user_id
         session["username"] = username
         flash("Logged in successfully.")
+        print("REDIRECTING TO HOME")
         return redirect(url_for("home"))
 
     return render_template("login.html", mode="login")
