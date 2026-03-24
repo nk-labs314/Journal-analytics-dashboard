@@ -46,45 +46,49 @@ HIGH_ENTRIES = [
 
 
 def reset_demo_account():
-    """Wipe and reseed all data for the demo account. Called on every demo login."""
     logger.info("Starting demo account reset for user_id=%s", DEMO_USER_ID)
 
     today = date.today()
     all_days = [today - timedelta(days=i) for i in range(1, 91)]
-    selected_days = sorted(random.sample(all_days, 60))
 
-    model = SentenceTransformer(MODEL_NAME)
+    #  reduce size
+    selected_days = sorted(random.sample(all_days, 20))
+
     engine = get_engine()
 
+    # SINGLE transaction for everything
     with engine.begin() as conn:
+
+        # delete old data
         conn.execute(text("DELETE FROM EntryEmbeddings WHERE user_id = :uid"), {"uid": DEMO_USER_ID})
         conn.execute(text("DELETE FROM BehaviorData WHERE user_id = :uid"), {"uid": DEMO_USER_ID})
         conn.execute(text("DELETE FROM MoodLogs WHERE user_id = :uid"), {"uid": DEMO_USER_ID})
 
-    for entry_date in selected_days:
-        mood = random.choices(
-            population=list(range(1, 11)),
-            weights=[2, 3, 5, 8, 12, 15, 18, 15, 12, 10],
-            k=1
-        )[0]
+        for entry_date in selected_days:
 
-        if mood <= 4:
-            journal = random.choice(LOW_ENTRIES)
-            sleep = round(random.uniform(3.5, 6.0), 1)
-            activity = random.randint(1, 2)
-            social = random.randint(0, 2)
-        elif mood <= 7:
-            journal = random.choice(MID_ENTRIES)
-            sleep = round(random.uniform(6.0, 7.5), 1)
-            activity = random.randint(2, 4)
-            social = random.randint(1, 4)
-        else:
-            journal = random.choice(HIGH_ENTRIES)
-            sleep = round(random.uniform(7.0, 9.0), 1)
-            activity = random.randint(3, 5)
-            social = random.randint(3, 5)
+            mood = random.choices(
+                population=list(range(1, 11)),
+                weights=[2, 3, 5, 8, 12, 15, 18, 15, 12, 10],
+                k=1
+            )[0]
 
-        with engine.begin() as conn:
+            if mood <= 4:
+                journal = random.choice(LOW_ENTRIES)
+                sleep = round(random.uniform(3.5, 6.0), 1)
+                activity = random.randint(1, 2)
+                social = random.randint(0, 2)
+            elif mood <= 7:
+                journal = random.choice(MID_ENTRIES)
+                sleep = round(random.uniform(6.0, 7.5), 1)
+                activity = random.randint(2, 4)
+                social = random.randint(1, 4)
+            else:
+                journal = random.choice(HIGH_ENTRIES)
+                sleep = round(random.uniform(7.0, 9.0), 1)
+                activity = random.randint(3, 5)
+                social = random.randint(3, 5)
+
+            # insert mood log
             result = conn.execute(
                 text("""
                     INSERT INTO MoodLogs (user_id, mood_score, date, journal_entry)
@@ -100,6 +104,7 @@ def reset_demo_account():
             )
             log_id = result.fetchone()[0]
 
+            # insert behavior
             conn.execute(
                 text("""
                     INSERT INTO BehaviorData (user_id, sleep_hours, activity_level, social_interactions, date)
@@ -114,9 +119,7 @@ def reset_demo_account():
                 }
             )
 
-            
-            embedding_bytes = None
-
+            # embeddings skipped
             conn.execute(
                 text("""
                     INSERT INTO EntryEmbeddings (user_id, log_id, embedding, date)
@@ -125,9 +128,9 @@ def reset_demo_account():
                 {
                     "user_id": DEMO_USER_ID,
                     "log_id": log_id,
-                    "embedding": embedding_bytes,
+                    "embedding": b'',
                     "date": entry_date.isoformat(),
                 }
             )
 
-    logger.info("Demo account reset complete — 60 entries inserted.")
+    logger.info("Demo account reset complete — 20 entries inserted.")

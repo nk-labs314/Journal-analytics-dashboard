@@ -199,11 +199,11 @@ def login():
             flash("Invalid username or password.")
             return redirect(url_for("login"))
 
-        #if username == DEMO_USERNAME:
-        #    try:
-        #        reset_demo_account()
-        #    except Exception:
-        #        logger.exception("Demo reset failed")
+        if username == DEMO_USERNAME:
+            try:
+                reset_demo_account()
+            except Exception:
+                logger.exception("Demo reset failed")
         print("SETTING SESSION")
         session["user_id"] = user_id
         session["username"] = username
