@@ -122,20 +122,22 @@ This ensures responses are anchored to user history, reducing hallucination and 
 ## Codebase Structure
 
 ```text
-main.py                  Flask routes and entry point
+main.py                  Flask routes and app factory
 config.py                Environment and app configuration
 services/
-    rag_service.py       Retrieval and LLM generation
-    embedding_service.py Sentence-transformer wrapper
-    lexicon_service.py   Lexicon loading and text analysis
-    analytics_service.py Dashboard computation
-    forecast_service.py  Model inference wrapper
-    data_service.py      Database queries
-    auth_service.py      User creation and verification
+    auth_service.py      Session handling, password management, and account creation
+    rag_service.py       Retrieval-augmented generation (RAG) and open-router LLM coordination
+    embedding_service.py dense vector embeddings via sentence-transformers
+    lexicon_service.py   Lexicon loading, scoring, and text analysis
+    analytics_service.py Dashboard metrics and aggregate computations
+    forecast_service.py  Multi-horizon inference model wrapper
+    data_service.py      Raw database queries and abstracting SQLAlchemy
+    insight_service.py   Direct text input lexicon analysis
+    demo_service.py      Automated sample data generation for demo accounts
 models/
-    lexicon_model.py     Bayesian lexicon math
-    forecasting.py       Feature extraction logic
-    feature_builder.py   Time-series feature engineering
+    lexicon_model.py     Bayesian lexicon training mathematics and persistence
+    forecasting.py       Feature extraction logic and Ridge regression wrappers
+    feature_builder.py   Time-series feature engineering 
 training/
     train_forecast.py    Offline Ridge model training
     train_lexicon.py     Offline global lexicon training
@@ -155,13 +157,16 @@ artifacts/
 
 ---
 
-## Engineering Fixes in This Build
+## Session Updates & Completed Features
 
-**Session persistence**: Running behind a reverse proxy on Hugging Face Spaces broke cookies. We fixed this with explicit `SameSite=None; Secure=True` settings and a rolling window for active sessions.
+In this development session, we implemented several critical upgrades to the core systems to ensure stability, security, and response accuracy:
 
-**Auth Hardening**: Route error unwrapping caused critical failures during login. We standardized all auth returns to a clean 3-tuple `(user_id, auth_hash, error)` and added CORS enforcement everywhere. Built out a robust E2E test suite.
-
-**LLM optimization**: Switched from Hugging Face Inference API to OpenRouter to bypass severe rate limit constraints on free serverless endpoints.
+- **App Factory Pattern**: Refactored the monolithic application into a proper Flask App Factory pattern, decoupling services from the routing layer for better testability down the line.
+- **RAG Pipeline & Context Upgrades**: Moved the chat to a seamless AJAX implementation. We added conversation memory so the chat remembers previous messages, and instituted strict system prompt guardrails so the LLM refuses to answer off-topic queries instead of hallucinating.
+- **Pre-warmed Inference Models**: Eliminated cold-start latency by preloading the Hugging Face `sentence-transformers` models during app startup.
+- **Data Fidelity & NLP Logic**: Re-trained the global lexicon on real journal entries rather than exclusively synthetic logs. We also improved the NLTK tokenizer to stop aggressively stripping emotionally significant words (like "sad") and added look-back intelligence to handle negation correctly.
+- **Hardened Authentication**: Fixed brittle auth tuples that caused login routing failures. Added strict `SameSite=None; Secure=True` cookies for iframe proxy contexts, enforced a sliding session expiration window (auto-logging out stale sessions), implemented global CORS policies, and built a dedicated Settings panel for password changes and destructive account deletions.
+- **Complete UI Overhaul**: Transitioned completely off native emojis in favor of scalable Lucide SVG icons. Added loading spinners globally to block excessive user input, and transformed the large sidebar into a responsive, native-feeling bottom navigation bar for mobile web users.
 
 ---
 
