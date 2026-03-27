@@ -139,7 +139,13 @@ def auth_and_csrf_checks():
 
     # Global active session invalidation (auth_hash matching)
     if "user_id" in session:
-        auth_hash = auth_service.get_user_auth(session["user_id"])
+        try:
+            auth_hash = auth_service.get_user_auth(session["user_id"])
+        except Exception as e:
+            logger.exception("Auth session check failed")
+            session.clear()
+            return redirect(url_for('main.login'))
+
         if not auth_hash or auth_hash != session.get("auth_hash"):
             session.clear()
             flash("Your session is invalid or your password was changed. Please log in again.")

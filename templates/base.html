@@ -74,7 +74,7 @@
 
             <div class="sidebar-footer">
                 <div class="sidebar-user">
-                    <div class="user-avatar">{{ session.get('username', '?')[0]|upper }}</div>
+                    <div class="user-avatar">{{ session.get('username', '?')[:1]|upper }}</div>
                     <div class="user-info">
                         <div class="user-name">{{ session.get('username', 'User') }}</div>
                         <div class="user-role">Member</div>
