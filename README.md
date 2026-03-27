@@ -8,296 +8,216 @@ app_port: 7860
 pinned: false
 ---
 ---
-# Journal Analytics Dashboard
+# Journal-Analytics-Dashboard
 
-An AI-powered journaling system that analyzes behavioral patterns, predicts future mood trends, and generates personalized insights using a Retrieval-Augmented Generation (RAG) pipeline.
+A full-stack, machine learning-driven personal analytics platform. Journal Analytics goes beyond standard journaling by applying natural language processing, regression modeling, and Retrieval-Augmented Generation to uncover patterns in personal behavioral data and forecast future mood trajectories.
 
-This project combines traditional machine learning (regression, feature engineering) with modern LLM-based reasoning to build a complete end-to-end analytics system.
+Deployed on Hugging Face Spaces: https://huggingface.co/spaces/MetHJ/journal-analytics-dashboard
 
 ---
 
-## Features
+## Technical Highlights
 
-* User Authentication
-  Secure session-based login system built with Flask
+This project demonstrates end-to-end ML engineering — combining traditional statistical learning with modern LLM workflows in a production web application.
 
-* Journal Logging
-  Tracks mood, behavioral signals (sleep, activity, social interaction), and text entries
-
-* Analytics Dashboard
-  Computes trends, correlations, and behavioral insights
-
-* Forecasting Engine
-  Predicts future mood using time-series features and regression
-
-* Insight Engine
-  Custom lexicon-based NLP system with user-specific adaptation
-
-* RAG-based Chat Assistant
-  Retrieves relevant past entries and generates grounded responses using an LLM
+- **Hybrid Bayesian NLP**: A custom lexicon engine that learns user-specific word-to-mood associations. It uses empirical Bayesian shrinkage to blend personal vocabulary against a global population baseline.
+- **Time Series Forecasting**: Rolling, lagged, and cyclical temporal features (sin/cos encoding of 60-day cycles) feed a Multi-Output Ridge Regression model predicting mood at 3, 7, and 14-day horizons.
+- **RAG Architecture**: Hugging Face `sentence-transformers` generate dense vector embeddings of journal entries. Cosine similarity retrieval grounds an LLM (GPT-3.5 Turbo via OpenRouter) in the user's historical context.
+- **Production Infrastructure**: Flask and SQLAlchemy handle session management and database abstraction (SQLite locally, PostgreSQL/Supabase in production). The app is Dockerized for Hugging Face Spaces deployment.
+- **Authentication & Security**: We fixed session handling to use sliding expiration windows, added a strict CORS policy, and built a dedicated `/settings` route for password updates and destructive account deletions. We also standardized the auth workflow with strict tuple error-handling.
 
 ---
 
 ## System Architecture
 
-```
-Frontend (HTML Templates)
-        ↓
-Flask Backend (Routes + Services)
-        ↓
------------------------------------
-| Supabase (PostgreSQL Database) |
------------------------------------
-        ↓
------------------------------------
-| Embeddings: SentenceTransformers |
-| LLM: OpenRouter (GPT-3.5 Turbo)  |
------------------------------------
-```
-
----
-
-## Architecture Diagram
-
-```
-                ┌────────────────────┐
-                │     Frontend       │
-                │ (HTML Templates)   │
-                └─────────┬──────────┘
-                          │
-                          ▼
-                ┌────────────────────┐
-                │    Flask Backend   │
-                │  (Routes + Logic)  │
-                └─────────┬──────────┘
-                          │
-        ┌─────────────────┼─────────────────┐
-        ▼                 ▼                 ▼
-┌──────────────┐  ┌────────────────┐  ┌────────────────────┐
-│  Supabase DB │  │ Embedding Model│  │   OpenRouter LLM   │
-│ (PostgreSQL) │  │ MiniLM-L6-v2   │  │   GPT-3.5 Turbo    │
-└──────────────┘  └────────────────┘  └────────────────────┘
-        │
-        ▼
-┌────────────────────┐
-│ Stored Embeddings  │
-│ + Journal Entries  │
-└────────────────────┘
+```text
+                +----------------------+
+                |      Frontend        |
+                |  (HTML Templates)    |
+                +----------+-----------+
+                           |
+                           v
+                +----------------------+
+                |    Flask Backend     |
+                |  (Routes + Logic)    |
+                +----------+-----------+
+                           |
+        +------------------+-------------------+
+        v                  v                   v
++--------------+  +----------------+  +--------------------+
+|  Supabase DB |  | Embedding Model|  |   OpenRouter LLM   |
+| (PostgreSQL) |  | MiniLM-L6-v2   |  |   GPT-3.5 Turbo    |
++--------------+  +----------------+  +--------------------+
+        |
+        v
++----------------------+
+| Stored Embeddings    |
+| + Journal Entries    |
++----------------------+
 ```
 
 ---
 
-## RAG Pipeline (How it Works)
+## Machine Learning Architecture
 
-1. User submits a query
-2. Query is converted into an embedding vector
-3. System retrieves top-k similar journal entries
-4. Retrieved entries + analytics + forecast are combined into context
-5. LLM generates a grounded, personalized response
+### 1. Hybrid Bayesian Lexicon (NLP)
 
-This ensures:
+Instead of relying purely on pre-trained sentiment models like VADER, the system builds its own word-to-mood association dictionary from journal history.
 
-* responses are based on user history
-* reduced hallucination
-* context-aware insights
+For each word $w$, a centered mood score is computed against the corpus mean $\bar{\mu}$:
 
----
+$$\text{score}_{\text{global}}(w) = \frac{1}{|D_w|} \sum_{d \in D_w} \text{mood}_d - \bar{\mu}$$
 
-## Machine Learning Design
+To personalize without overfitting small user datasets, a count-based shrinkage weight $\lambda_w$ (smoothing constant $k = 10$) blends the user's vocabulary against the global prior:
 
-### 1. Hybrid Lexicon-Based NLP
+$$\lambda_w = \frac{n_u(w)}{n_u(w) + k}$$
 
-The system builds a custom word-to-mood mapping.
+$$\text{score}_{\text{hybrid}}(w) = \lambda_w \cdot \text{score}_{\text{user}}(w) + (1 - \lambda_w) \cdot \text{score}_{\text{global}}(w)$$
 
-For each word w:
+When a user writes a new journal entry, the text is lemmatized via NLTK, and the hybrid scores of the constituent words are averaged to predict mood on a 1-10 scale.
 
-score_global(w) = average mood of entries containing w − global mean
+### 2. Multi-Horizon Mood Forecasting (Regression)
 
-To avoid overfitting, a shrinkage factor is applied:
+A Ridge regression model predicts rolling average mood over the next $h \in \{3, 7, 14\}$ days.
 
-λ_w = n_u(w) / (n_u(w) + k)
+Feature engineering at each time step $t$:
 
-Final score:
+- Lags: $m_{t-1},\ m_{t-2}$
+- Rolling averages: $\frac{1}{w}\sum_{i=0}^{w-1} m_{t-i}$ for $w \in \{3, 7, 14\}$
+- Cyclical time encodings: $\sin\!\left(\frac{2\pi \cdot t}{60}\right)$ and $\cos\!\left(\frac{2\pi \cdot t}{60}\right)$
+- Text signal: scalar output from the NLP lexicon model
 
-score_hybrid(w) = λ_w · score_user(w) + (1 − λ_w) · score_global(w)
+Ridge regression is trained jointly on multi-output targets $Y \in \mathbb{R}^{N \times 3}$:
 
-This allows:
-- personalization of vocabulary  
-- stability for low-frequency words  
+$$\hat{Y} = X\hat{B}, \quad \hat{B} = \arg\min_B \|Y - XB\|_F^2 + \alpha\|B\|_F^2$$
 
-### 2. Mood Forecasting (Ridge Regression)
+### 3. RAG Pipeline
 
-Future mood is predicted using a multi-output regression model:
+To provide an AI assistant grounded in the user's history, the system uses semantic search over journal entries.
 
-Ŷ = X·B
+1. The user submits a query.
+2. The query is converted into a 384-dimensional embedding vector via `all-MiniLM-L6-v2`.
+3. Dot-product similarity (cosine on normalized vectors) retrieves the top-K most relevant past entries.
+4. Retrieved entries, current analytics, and mood forecast form a structured context block.
+5. GPT-3.5 Turbo (via OpenRouter) generates a grounded response.
 
-The model is trained using ridge regularization:
-
-min ||Y - X·B||² + α||B||²
-
-Features include:
-- lag values (m_t-1, m_t-2)
-- rolling averages (3, 7, 14 days)
-- cyclical encoding (sin, cos)
-- NLP-derived sentiment signals
-
-This design:
-- handles noisy behavioral data  
-- avoids overfitting  
-- enables multi-horizon forecasting  
-
-### 3. Retrieval-Augmented Generation (RAG)
-
-* Embeddings generated using MiniLM (384-d vectors)
-* Cosine similarity used for retrieval
-* Context injected into LLM prompt
-
-This ensures:
-
-* personalized responses
-* grounding in historical data
-* reduced hallucination
+This ensures responses are anchored to user history, reducing hallucination and keeping insights specific to the individual.
 
 ---
 
 ## Tech Stack
 
-* Backend: Flask, SQLAlchemy
-* Database: Supabase (PostgreSQL)
-* Machine Learning:
-
-  * scikit-learn (Ridge Regression)
-  * SentenceTransformers (embeddings)
-* LLM: OpenRouter (GPT-3.5 Turbo)
-* Deployment: Hugging Face Spaces (Docker)
+| Component | Technologies |
+|---|---|
+| Backend Framework | Python 3.12, Flask, Gunicorn |
+| Database ORM | SQLAlchemy (SQLite locally, PostgreSQL/Supabase in production) |
+| Machine Learning | scikit-learn (Ridge Regression), pandas, numpy, joblib |
+| NLP and Embeddings | sentence-transformers, NLTK, VADER |
+| LLM | GPT-3.5 Turbo via OpenRouter |
+| Frontend | HTML5, Vanilla CSS, Jinja2, Chart.js |
+| Deployment | Docker, Hugging Face Spaces |
 
 ---
 
-## Code Structure
+## Codebase Structure
 
-```
-main.py        → Flask routes and entry point  
-services/      → business logic (RAG, analytics, auth, embeddings)  
-models/        → ML logic (forecasting, lexicon scoring)  
-training/      → offline model training scripts  
+```text
+main.py                  Flask routes and entry point
+config.py                Environment and app configuration
+services/
+    rag_service.py       Retrieval and LLM generation
+    embedding_service.py Sentence-transformer wrapper
+    lexicon_service.py   Lexicon loading and text analysis
+    analytics_service.py Dashboard computation
+    forecast_service.py  Model inference wrapper
+    data_service.py      Database queries
+    auth_service.py      User creation and verification
+models/
+    lexicon_model.py     Bayesian lexicon math
+    forecasting.py       Feature extraction logic
+    feature_builder.py   Time-series feature engineering
+training/
+    train_forecast.py    Offline Ridge model training
+    train_lexicon.py     Offline global lexicon training
+artifacts/
+    ridge_multi_output.pkl  Trained Ridge model + lexicon bundle
 ```
 
 ---
 
 ## Key Design Decisions
 
-### Custom Backend over BaaS
+**Custom backend over BaaS**: A Flask backend gives us full control over inference logic, session handling, and the RAG pipeline.
 
-A Flask backend was implemented to:
+**Hybrid AI architecture**: Embeddings are computed locally using sentence-transformers. LLM inference goes through the OpenRouter API. This splits the load — compute-heavy embedding stays in-process, while LLM calls scale externally.
 
-* maintain full control over logic
-* demonstrate backend engineering capability
-
----
-
-### Hybrid AI Architecture
-
-* Embeddings computed locally
-* LLM handled via external API
-
-This balances:
-
-* cost
-* performance
-* reliability
+**RAG for personalization**: Combining retrieved journal entries, live analytics signals, and forecast outputs into a single prompt forces the LLM to anchor its answers in the user's actual data.
 
 ---
 
-### RAG for Personalization
+## Engineering Fixes in This Build
 
-Combines:
+**Session persistence**: Running behind a reverse proxy on Hugging Face Spaces broke cookies. We fixed this with explicit `SameSite=None; Secure=True` settings and a rolling window for active sessions.
 
-* retrieved journal entries
-* analytics signals
-* forecast outputs
+**Auth Hardening**: Route error unwrapping caused critical failures during login. We standardized all auth returns to a clean 3-tuple `(user_id, auth_hash, error)` and added CORS enforcement everywhere. Built out a robust E2E test suite.
 
-into a unified prompt for the LLM
+**LLM optimization**: Switched from Hugging Face Inference API to OpenRouter to bypass severe rate limit constraints on free serverless endpoints.
 
 ---
 
-## Key Engineering Challenges
+## Running Locally
 
-### Session Persistence in Deployment
+### Prerequisites
 
-Resolved cookie/session issues in a proxied environment (Hugging Face Spaces).
+Python 3.12+
 
----
-
-### LLM Provider Limitations
-
-Switched from Hugging Face inference APIs to OpenRouter due to model/provider constraints.
-
----
-
-### Context Construction for RAG
-
-Designed a structured pipeline combining multiple data sources into a coherent prompt.
-
----
-
-## Results
-
-* Retrieves relevant historical entries using embeddings
-* Generates context-aware, grounded responses
-* Maintains user-level data isolation via backend logic
-* End-to-end system functioning across multiple components
-
----
-
-## Setup
+### Setup
 
 ```bash
 git clone https://github.com/nk-labs314/Journal-analytics-dashboard.git
 cd Journal-analytics-dashboard
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+touch .env
 ```
 
----
+Add to `.env`:
 
-## Environment Variables
-
+```text
+SECRET_KEY=your-random-secret-key
+OPENROUTER_API_KEY=your-openrouter-api-key
+# Optional: Supabase PostgreSQL connection string
+# DATABASE_URL=postgresql://...
 ```
-SECRET_KEY=your_secret_key
-OPENROUTER_API_KEY=your_api_key
-DATABASE_URL=your_supabase_database_url
-```
 
----
-
-## Run Locally
+### Run
 
 ```bash
 python main.py
 ```
 
----
-
-## Future Improvements
-
-* Add RLS + Supabase Auth integration
-* Improve retrieval ranking in RAG pipeline
-* Add caching for LLM responses
-* Scale backend architecture
-
----
-## Deployment
-
-The application is deployed on Hugging Face Spaces and runs as a containerized Flask service.
-https://huggingface.co/spaces/MetHJ/journal-analytics-dashboard
+Access at `http://127.0.0.1:5000`.
 
 ---
 
-## Notes
-The configuration block at the top of this README is required for Hugging Face Spaces deployment.
+## Production Deployment
+
+The app is deployed on Hugging Face Spaces as a containerized Flask service.
+
+The `Dockerfile` pulls `python:3.12-slim`, installs dependencies, and pre-bakes the `all-MiniLM-L6-v2` sentence-transformer model to avoid cold starts.
+
+Required environment variables in the Spaces settings: `SECRET_KEY`, `OPENROUTER_API_KEY`, and optionally `DATABASE_URL` for Supabase PostgreSQL.
+
+The app runs via: `gunicorn main:app --bind 0.0.0.0:7860`
 
 ---
 
+## Planned Improvements
 
-## Author
-
-Nandan Kailasanath
+- CSRF protection on all form endpoints
+- Supabase Auth integration with Row Level Security
+- Retraining pipeline on real user data (currently trains on synthetic data)
+- Persistent multi-turn chat history
+- LLM response caching for repeated queries
+- Improved retrieval ranking in the RAG pipeline
