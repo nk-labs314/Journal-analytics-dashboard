@@ -20,3 +20,10 @@ class Config:
     HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "")
 
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+
+
+class TestingConfig(Config):
+    TESTING = True
+    DATABASE_URL = "sqlite:///:memory:"
+    RATELIMIT_ENABLED = False
+    WTF_CSRF_ENABLED = False

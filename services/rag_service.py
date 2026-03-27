@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class RAGService:
 
-    def __init__(self, embedding_service, hf_api_key=""):
+    def __init__(self, embedding_service):
         self.embedding_service = embedding_service
 
         # Use HF Inference API with a model strictly supported on the free Serverless Chat endpoint

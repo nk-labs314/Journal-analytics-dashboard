@@ -109,34 +109,28 @@ def login_required(view_func):
 
     return wrapper
 
-app = Flask(__name__)
-app.static_folder = 'static'
-app.config.from_object(Config)
-app.config.update(
-    SESSION_COOKIE_SAMESITE="None",
-    SESSION_COOKIE_SECURE=True
-)
-app.secret_key = app.config["SECRET_KEY"]
+from flask import Blueprint
 
-forecast_service = ForecastService()
-lexicon_service = LexiconService()
-embedding_service = EmbeddingService()
-rag_service = RAGService(embedding_service, Config.HUGGINGFACE_API_KEY)
+main_bp = Blueprint("main", __name__)
+
+forecast_service = None
+lexicon_service = None
+embedding_service = None
+rag_service = None
 
 limiter = Limiter(
-    get_remote_address,
-    app=app,
+    key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"],
     storage_uri="memory://"
 )
 
-@app.route('/')
+@main_bp.route('/')
 @login_required
 def home():
     return render_template("index.html")
 
 
-@app.route("/register", methods=["GET", "POST"])
+@main_bp.route("/register", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
 def register():
     if "user_id" in session:
@@ -159,7 +153,7 @@ def register():
     return render_template("login.html", mode="register")
 
 
-@app.route("/login", methods=["GET", "POST"])
+@main_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
 def login():
     if "user_id" in session:
@@ -182,13 +176,13 @@ def login():
     return render_template("login.html", mode="login")
 
 
-@app.route("/logout")
+@main_bp.route("/logout")
 def logout():
     session.clear()
     flash("Logged out.")
     return redirect(url_for("login"))
 
-@app.route('/log', methods=['POST'])
+@main_bp.route('/log', methods=['POST'])
 @login_required
 @limiter.limit("10 per minute")
 def log_entry():
@@ -230,7 +224,7 @@ def log_entry():
 
 
 
-@app.route('/dashboard')
+@main_bp.route('/dashboard')
 @login_required
 def dashboard():
     user_id = session["user_id"]
@@ -253,7 +247,7 @@ def dashboard():
     return render_template('dashboard.html', analysis=analysis)
 
 
-@app.route('/journals')
+@main_bp.route('/journals')
 @login_required
 def journals():
     user_id = session["user_id"]
@@ -261,7 +255,7 @@ def journals():
 
     return render_template('journals.html', journals=df_journals.to_dict(orient='records'))
 
-@app.route("/forecast")
+@main_bp.route("/forecast")
 @login_required
 def forecast():
     user_id = session["user_id"]
@@ -274,7 +268,7 @@ def forecast():
         predictions=predictions
     )
 
-@app.route("/insights", methods=["GET", "POST"])
+@main_bp.route("/insights", methods=["GET", "POST"])
 @login_required
 @limiter.limit("10 per minute")
 def insights():
@@ -298,7 +292,7 @@ def insights():
     )
 
 
-@app.route("/chat")
+@main_bp.route("/chat")
 @login_required
 def chat():
     return render_template("chat.html")
@@ -315,7 +309,7 @@ MOOD_KEYWORDS = {
 }
 
 
-@app.route("/chat/message", methods=["POST"])
+@main_bp.route("/chat/message", methods=["POST"])
 @login_required
 @limiter.limit("5 per minute")
 def chat_message():
@@ -369,7 +363,7 @@ def chat_message():
     return jsonify({"response": response})
 
 
-@app.route("/health")
+@main_bp.route("/health")
 def health():
     try:
         engine = get_engine()
@@ -380,47 +374,79 @@ def health():
         return {"status": "db_error"}, 500
 
     try:
-        model_status = "loaded" if forecast_service.model else "missing"
-    except Exception:
-        model_status = "error"
-
-    try:
-        lexicon_status = "loaded" if lexicon_service.global_lexicon else "missing"
-    except Exception:
-        lexicon_status = "error"
-
-    try:
-        embedding_status = "loaded" if embedding_service.model else "missing"
+        embedding_service.embed("health check")
+        embedding_status = "ok"
     except Exception:
         embedding_status = "error"
+
+    try:
+        rag_service.client.chat.completions.create(
+            model="openai/gpt-3.5-turbo",
+            messages=[{"role": "user", "content": "ping"}],
+            max_tokens=1
+        )
+        llm_status = "ok"
+    except Exception:
+        llm_status = "error"
 
     return {
         "status": "ok",
         "database": db_status,
-        "forecast_model": model_status,
-        "lexicon_model": lexicon_status,
-        "embedding_model": embedding_status
+        "embedding_model": embedding_status,
+        "llm_api": llm_status
     }, 200
 
 
-
-with app.app_context():
-    try:
-        init_db()
-        embedding_service.embed("warmup")
-    except Exception:
-        logger.exception("Database initialization failed")
-
-
-@app.errorhandler(500)
+@main_bp.errorhandler(500)
 def handle_500(error):
     logger.exception("Internal server error occurred")
     return {"error": "Internal server error"}, 500
 
 
-@app.errorhandler(404)
+@main_bp.errorhandler(404)
 def handle_404(error):
     return {"error": "Resource not found"}, 404
 
+
+def create_app(config_class=Config):
+    app_instance = Flask(__name__)
+    app_instance.static_folder = 'static'
+    app_instance.config.from_object(config_class)
+    app_instance.config.update(
+        SESSION_COOKIE_SAMESITE="None",
+        SESSION_COOKIE_SECURE=True
+    )
+    app_instance.secret_key = app_instance.config["SECRET_KEY"]
+
+    logging.basicConfig(
+        format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+        level=logging.INFO,
+        force=True
+    )
+
+    limiter.init_app(app_instance)
+
+    global forecast_service, lexicon_service, embedding_service, rag_service
+    forecast_service = ForecastService()
+    lexicon_service = LexiconService()
+    embedding_service = EmbeddingService()
+    rag_service = RAGService(embedding_service)
+
+    if app_instance.config.get("TESTING"):
+        pass
+
+    app_instance.register_blueprint(main_bp)
+
+    with app_instance.app_context():
+        try:
+            init_db()
+            embedding_service.embed("warmup")
+        except Exception:
+            logger.exception("Database initialization failed")
+
+    return app_instance
+
+app = create_app()
+
 if __name__ == '__main__':
-    app.run(debug=Config.DEBUG)
+    app.run(debug=app.config["DEBUG"])
