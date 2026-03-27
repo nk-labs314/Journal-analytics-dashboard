@@ -7,29 +7,29 @@
 
 /* ---- CSS Variables ---- */
 :root {
-    --primary: #6C5CE7;
-    --primary-light: #A29BFE;
-    --primary-dark: #5A4BD1;
-    --primary-soft: rgba(108, 92, 231, 0.08);
-    --primary-hover: rgba(108, 92, 231, 0.12);
+    --primary: #059669;
+    --primary-light: #10B981;
+    --primary-dark: #047857;
+    --primary-soft: rgba(5, 150, 105, 0.08);
+    --primary-hover: rgba(5, 150, 105, 0.12);
 
-    --bg-body: #F0F2F8;
+    --bg-body: #FAF8F5;
     --bg-sidebar: #FFFFFF;
     --bg-card: #FFFFFF;
-    --bg-input: #F5F6FA;
+    --bg-input: #F4EFEA;
 
-    --text-primary: #2D3436;
-    --text-secondary: #636E72;
-    --text-muted: #B2BEC3;
+    --text-primary: #2C2825;
+    --text-secondary: #5C5550;
+    --text-muted: #A69F99;
     --text-white: #FFFFFF;
 
-    --border: #E8ECF1;
-    --border-light: #F0F2F5;
+    --border: #EBE5DF;
+    --border-light: #F2EFEA;
 
-    --success: #00B894;
-    --warning: #FDCB6E;
-    --danger: #E17055;
-    --info: #74B9FF;
+    --success: #059669;
+    --warning: #F59E0B;
+    --danger: #DC2626;
+    --info: #0284C7;
 
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
@@ -110,7 +110,7 @@ a:hover {
 .sidebar-brand .brand-icon {
     width: 36px;
     height: 36px;
-    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    background: var(--primary);
     border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
@@ -178,7 +178,7 @@ a:hover {
 .sidebar-user .user-avatar {
     width: 34px;
     height: 34px;
-    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    background: var(--primary);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -331,14 +331,15 @@ a:hover {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    background: var(--primary);
     color: white;
-    box-shadow: 0 2px 8px rgba(108, 92, 231, 0.3);
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
 }
 
 .btn-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(108, 92, 231, 0.4);
+    box-shadow: 0 4px 14px rgba(5, 150, 105, 0.4);
+    background: var(--primary-dark);
 }
 
 .btn-secondary {
@@ -395,7 +396,7 @@ a:hover {
 .form-control:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
     background: white;
 }
 
@@ -436,7 +437,7 @@ select.form-control {
 .flash-info {
     background: var(--primary-soft);
     color: var(--primary);
-    border: 1px solid rgba(108, 92, 231, 0.15);
+    border: 1px solid rgba(5, 150, 105, 0.15);
 }
 
 /* ---- Tables ---- */
@@ -541,12 +542,12 @@ tr:hover td {
 }
 
 .chat-message.user .message-avatar {
-    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    background: var(--primary);
     color: white;
 }
 
 .chat-message.assistant .message-avatar {
-    background: linear-gradient(135deg, var(--success), #55EFC4);
+    background: var(--primary-dark);
     color: white;
 }
 
@@ -561,7 +562,7 @@ tr:hover td {
 
 .chat-message.user .message-content {
     background: var(--primary-soft);
-    border-color: rgba(108, 92, 231, 0.15);
+    border-color: rgba(5, 150, 105, 0.15);
 }
 
 .chat-message .message-sender {
@@ -603,7 +604,7 @@ tr:hover td {
 .chat-input-area textarea:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
     background: white;
 }
 
@@ -674,7 +675,7 @@ tr:hover td {
 .auth-card .auth-header .auth-icon {
     width: 52px;
     height: 52px;
-    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    background: var(--primary);
     border-radius: var(--radius-md);
     display: flex;
     align-items: center;
