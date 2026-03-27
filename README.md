@@ -7,46 +7,41 @@ sdk: docker
 app_port: 7860
 pinned: false
 ---
----
-# Journal-Analytics-Dashboard
 
-A full-stack, machine learning-driven personal analytics platform. Journal Analytics goes beyond standard journaling by applying natural language processing, regression modeling, and Retrieval-Augmented Generation to uncover patterns in personal behavioral data and forecast future mood trajectories.
+# Journal Analytics Dashboard
 
-Deployed on Hugging Face Spaces: https://huggingface.co/spaces/MetHJ/journal-analytics-dashboard
+A personal analytics platform that applies NLP, time-series regression, and retrieval-augmented generation to journal entries — turning freeform text into mood forecasts and grounded AI insights.
 
----
-
-## Technical Highlights
-
-This project demonstrates end-to-end ML engineering — combining traditional statistical learning with modern LLM workflows in a production web application.
-
-- **Hybrid Bayesian NLP**: A custom lexicon engine that learns user-specific word-to-mood associations. It uses empirical Bayesian shrinkage to blend personal vocabulary against a global population baseline.
-- **Time Series Forecasting**: Rolling, lagged, and cyclical temporal features (sin/cos encoding of 60-day cycles) feed a Multi-Output Ridge Regression model predicting mood at 3, 7, and 14-day horizons.
-- **RAG Architecture**: Hugging Face `sentence-transformers` generate dense vector embeddings of journal entries. Cosine similarity retrieval grounds an LLM (GPT-3.5 Turbo via OpenRouter) in the user's historical context.
-- **Production Infrastructure**: Flask and SQLAlchemy handle session management and database abstraction (SQLite locally, PostgreSQL/Supabase in production). The app is Dockerized for Hugging Face Spaces deployment.
-- **Authentication & Security**: We fixed session handling to use sliding expiration windows, added a strict CORS policy, and built a dedicated `/settings` route for password updates and destructive account deletions. We also standardized the auth workflow with strict tuple error-handling.
+**Live demo:** https://huggingface.co/spaces/MetHJ/journal-analytics-dashboard  
+**Source:** https://github.com/nk-labs314/Journal-analytics-dashboard
 
 ---
 
-## System Architecture
+## What it does
 
-```text
+You write a journal entry. The system scores it with a personalized Bayesian lexicon, stores a dense vector embedding of it, updates your mood time series, and runs a multi-horizon Ridge regression to forecast your mood over the next 3, 7, and 14 days. When you open the chat, a RAG pipeline retrieves your most relevant past entries using cosine similarity and passes them — alongside your live analytics and forecast — to an LLM, so the responses are grounded in your actual history rather than generic advice.
+
+---
+
+## Architecture
+
+```
                 +----------------------+
                 |      Frontend        |
-                |  (HTML Templates)    |
+                |  (Jinja2 Templates)  |
                 +----------+-----------+
                            |
                            v
                 +----------------------+
                 |    Flask Backend     |
-                |  (Routes + Logic)    |
+                |  (App Factory)       |
                 +----------+-----------+
                            |
         +------------------+-------------------+
         v                  v                   v
 +--------------+  +----------------+  +--------------------+
 |  Supabase DB |  | Embedding Model|  |   OpenRouter LLM   |
-| (PostgreSQL) |  | MiniLM-L6-v2   |  |   GPT-3.5 Turbo    |
+| (PostgreSQL) |  | MiniLM-L6-v2   |  |   (Mistral-7B)     |
 +--------------+  +----------------+  +--------------------+
         |
         v
@@ -58,50 +53,73 @@ This project demonstrates end-to-end ML engineering — combining traditional st
 
 ---
 
-## Machine Learning Architecture
+## ML Components
 
-### 1. Hybrid Bayesian Lexicon (NLP)
+### 1. Hybrid Bayesian Lexicon
 
-Instead of relying purely on pre-trained sentiment models like VADER, the system builds its own word-to-mood association dictionary from journal history.
+Rather than using a pre-trained sentiment model, the system builds a word-to-mood dictionary from journal history and personalizes it per user via empirical Bayesian shrinkage.
 
-For each word $w$, a centered mood score is computed against the corpus mean $\bar{\mu}$:
+For each word $w$, a centered score is computed relative to the corpus mean $\bar{\mu}$:
 
 $$\text{score}_{\text{global}}(w) = \frac{1}{|D_w|} \sum_{d \in D_w} \text{mood}_d - \bar{\mu}$$
 
-To personalize without overfitting small user datasets, a count-based shrinkage weight $\lambda_w$ (smoothing constant $k = 10$) blends the user's vocabulary against the global prior:
+A count-based shrinkage weight $\lambda_w$ (smoothing constant $k = 10$) blends the user's vocabulary against the global prior, avoiding overfitting on small per-user datasets:
 
 $$\lambda_w = \frac{n_u(w)}{n_u(w) + k}$$
 
 $$\text{score}_{\text{hybrid}}(w) = \lambda_w \cdot \text{score}_{\text{user}}(w) + (1 - \lambda_w) \cdot \text{score}_{\text{global}}(w)$$
 
-When a user writes a new journal entry, the text is lemmatized via NLTK, and the hybrid scores of the constituent words are averaged to predict mood on a 1-10 scale.
+The tokenizer lemmatizes via NLTK, removes stopwords while preserving negation words (`not`, `never`, `can't`, etc.), and applies a 2-token look-back window to flip scores on negated words (`"not happy"` → negated). High-valence terms (`suicidal`, `hopeless`, `productive`) have hard overrides to avoid being diluted by context.
 
-### 2. Multi-Horizon Mood Forecasting (Regression)
+### 2. Multi-Horizon Mood Forecasting (Ridge Regression)
 
 A Ridge regression model predicts rolling average mood over the next $h \in \{3, 7, 14\}$ days.
 
-Feature engineering at each time step $t$:
+Feature set at each time step $t$:
 
 - Lags: $m_{t-1},\ m_{t-2}$
 - Rolling averages: $\frac{1}{w}\sum_{i=0}^{w-1} m_{t-i}$ for $w \in \{3, 7, 14\}$
 - Cyclical time encodings: $\sin\!\left(\frac{2\pi \cdot t}{60}\right)$ and $\cos\!\left(\frac{2\pi \cdot t}{60}\right)$
-- Text signal: scalar output from the NLP lexicon model
+- Lexicon signal: centered score from the per-entry NLP model (bridges text signal into the time-series model)
 
-Ridge regression is trained jointly on multi-output targets $Y \in \mathbb{R}^{N \times 3}$:
+The model is trained jointly on all three horizons as multi-output targets $Y \in \mathbb{R}^{N \times 3}$:
 
 $$\hat{Y} = X\hat{B}, \quad \hat{B} = \arg\min_B \|Y - XB\|_F^2 + \alpha\|B\|_F^2$$
 
-### 3. RAG Pipeline
+with $\alpha = 1.0$. Users are processed independently (no cross-user leakage), and targets are built from rolling averages of forward-shifted mood scores.
 
-To provide an AI assistant grounded in the user's history, the system uses semantic search over journal entries.
+### 3. Delta Forecasting (Mood Change Prediction)
 
-1. The user submits a query.
-2. The query is converted into a 384-dimensional embedding vector via `all-MiniLM-L6-v2`.
-3. Dot-product similarity (cosine on normalized vectors) retrieves the top-K most relevant past entries.
-4. Retrieved entries, current analytics, and mood forecast form a structured context block.
-5. GPT-3.5 Turbo (via OpenRouter) generates a grounded response.
+A separate evaluation track benchmarks predicting the mood *change* $\delta = m_{t+h} - m_t$ rather than the absolute value. Two approaches are compared:
 
-This ensures responses are anchored to user history, reducing hallucination and keeping insights specific to the individual.
+- **TF-IDF + Ridge:** 5,000-feature TF-IDF representation of journal text → Ridge regression on delta targets
+- **Lexicon Delta:** centered lexicon score → linear calibration layer trained to map lexicon signal to delta
+
+Both are evaluated against a zero-delta baseline (predicting no change) and logged via the experiment tracker.
+
+### 4. RAG Pipeline
+
+1. User submits a query.
+2. The query is embedded into 384 dimensions via `all-MiniLM-L6-v2`.
+3. Stored entry embeddings (serialized as raw float32 bytes in PostgreSQL) are deserialized and scored via dot-product similarity on normalized vectors.
+4. Top-K retrieved entries, current analytics summary, and mood forecast form a structured context block.
+5. The LLM generates a response anchored to that context, with a strict system prompt that refuses off-topic queries.
+
+Embeddings are preloaded at startup to avoid cold-start latency on Hugging Face Spaces.
+
+---
+
+## Evaluation Infrastructure
+
+Three independent evaluation scripts with chronological train/test splits (no future leakage) and a persistent CSV experiment logger:
+
+| Script | Model | Metrics logged |
+|---|---|---|
+| `evaluate_lexicon.py` | Hybrid Bayesian lexicon | MAE, R², Pearson r vs mean baseline |
+| `evaluate_forecasting.py` | Multi-output Ridge (3/7/14-day) | MAE per horizon vs lag-1 baseline |
+| `evaluate_delta.py` | TF-IDF Ridge + Lexicon Delta | MAE, R² vs zero-delta baseline |
+
+The experiment logger (`utils/experiment_logger.py`) records dataset version, model name, hyperparameters, metrics, baseline metrics, and a timestamp to `experiments_log.csv` — so benchmark numbers are reproducible and version-tracked.
 
 ---
 
@@ -109,64 +127,59 @@ This ensures responses are anchored to user history, reducing hallucination and 
 
 | Component | Technologies |
 |---|---|
-| Backend Framework | Python 3.12, Flask, Gunicorn |
+| Backend | Python 3.12, Flask (App Factory), Gunicorn |
 | Database ORM | SQLAlchemy (SQLite locally, PostgreSQL/Supabase in production) |
-| Machine Learning | scikit-learn (Ridge Regression), pandas, numpy, joblib |
-| NLP and Embeddings | sentence-transformers, NLTK, VADER |
-| LLM | GPT-3.5 Turbo via OpenRouter |
-| Frontend | HTML5, Vanilla CSS, Jinja2, Chart.js |
+| Machine Learning | scikit-learn (Ridge, LinearRegression, TF-IDF), pandas, numpy, joblib |
+| NLP and Embeddings | sentence-transformers (MiniLM-L6-v2), NLTK (lemmatizer, negation-aware tokenizer), VADER |
+| LLM | Mistral-7B via OpenRouter |
+| Frontend | HTML5, Vanilla CSS, Jinja2, Chart.js, Lucide SVG icons |
 | Deployment | Docker, Hugging Face Spaces |
 
 ---
 
 ## Codebase Structure
 
-```text
-main.py                  Flask routes and app factory
-config.py                Environment and app configuration
-services/
-    auth_service.py      Session handling, password management, and account creation
-    rag_service.py       Retrieval-augmented generation (RAG) and open-router LLM coordination
-    embedding_service.py dense vector embeddings via sentence-transformers
-    lexicon_service.py   Lexicon loading, scoring, and text analysis
-    analytics_service.py Dashboard metrics and aggregate computations
-    forecast_service.py  Multi-horizon inference model wrapper
-    data_service.py      Raw database queries and abstracting SQLAlchemy
-    insight_service.py   Direct text input lexicon analysis
-    demo_service.py      Automated sample data generation for demo accounts
+```
+main.py                      Flask app factory and route registration
+config.py                    Environment config and app settings
 models/
-    lexicon_model.py     Bayesian lexicon training mathematics and persistence
-    forecasting.py       Feature extraction logic and Ridge regression wrappers
-    feature_builder.py   Time-series feature engineering 
+    lexicon_model.py         Bayesian shrinkage lexicon — training, scoring, negation handling
+    forecasting.py           Time-series feature construction and per-horizon train/eval
+    feature_builder.py       Feature engineering — lags, rolling windows, cyclical encoding, lexicon score
 training/
-    train_forecast.py    Offline Ridge model training
-    train_lexicon.py     Offline global lexicon training
+    train_forecast.py        Offline Ridge training — serializes model + lexicon into a single artifact
+    train_lexicon.py         Offline global lexicon training
+evaluation/
+    evaluate_lexicon.py      Lexicon benchmark with experiment logging
+    evaluate_forecasting.py  Forecasting benchmark with experiment logging
+    evaluate_delta.py        Delta prediction — TF-IDF Ridge vs lexicon comparison
+utils/
+    experiment_logger.py     Append-only CSV experiment tracker with UUID-stamped runs
+services/
+    auth_service.py          Session management, sliding expiry, password and account handling
+    rag_service.py           Vector retrieval + LLM generation with conversation memory
+    embedding_service.py     Sentence-transformer wrapper with similarity scoring
+    lexicon_service.py       Lexicon loading and inference at request time
+    analytics_service.py     Dashboard aggregates and mood trend computation
+    forecast_service.py      Inference wrapper for the trained Ridge artifact
+    data_service.py          SQLAlchemy query layer
+    demo_service.py          Demo account seeding — backdated entries with real MiniLM embeddings
 artifacts/
-    ridge_multi_output.pkl  Trained Ridge model + lexicon bundle
+    ridge_multi_output.pkl   Trained Ridge model + bundled global lexicon
+    global_lexicon.pkl       Standalone lexicon artifact
 ```
 
 ---
 
 ## Key Design Decisions
 
-**Custom backend over BaaS**: A Flask backend gives us full control over inference logic, session handling, and the RAG pipeline.
+**Why a custom lexicon over VADER?** VADER uses a static, domain-general word list. Personal journals have idiosyncratic vocabulary — the word "run" means something different to a runner than to someone describing emotional avoidance. The Bayesian shrinkage approach learns user-specific associations while falling back to the population signal for rare words.
 
-**Hybrid AI architecture**: Embeddings are computed locally using sentence-transformers. LLM inference goes through the OpenRouter API. This splits the load — compute-heavy embedding stays in-process, while LLM calls scale externally.
+**Why Ridge over a neural sequence model?** With a realistic 30–100 entries per user, a transformer would overfit immediately. Ridge with $\ell_2$ regularization and explicit temporal features is more interpretable and actually fits the data size.
 
-**RAG for personalization**: Combining retrieved journal entries, live analytics signals, and forecast outputs into a single prompt forces the LLM to anchor its answers in the user's actual data.
+**Why split embeddings from LLM inference?** Sentence-transformer inference runs in-process (no API latency, no cost per call). LLM inference goes through OpenRouter. Splitting these lets the retrieval step stay fast while the generation step stays scalable.
 
----
-
-## Session Updates & Completed Features
-
-In this development session, we implemented several critical upgrades to the core systems to ensure stability, security, and response accuracy:
-
-- **App Factory Pattern**: Refactored the monolithic application into a proper Flask App Factory pattern, decoupling services from the routing layer for better testability down the line.
-- **RAG Pipeline & Context Upgrades**: Moved the chat to a seamless AJAX implementation. We added conversation memory so the chat remembers previous messages, and instituted strict system prompt guardrails so the LLM refuses to answer off-topic queries instead of hallucinating.
-- **Pre-warmed Inference Models**: Eliminated cold-start latency by preloading the Hugging Face `sentence-transformers` models during app startup.
-- **Data Fidelity & NLP Logic**: Re-trained the global lexicon on real journal entries rather than exclusively synthetic logs. We also improved the NLTK tokenizer to stop aggressively stripping emotionally significant words (like "sad") and added look-back intelligence to handle negation correctly.
-- **Hardened Authentication**: Fixed brittle auth tuples that caused login routing failures. Added strict `SameSite=None; Secure=True` cookies for iframe proxy contexts, enforced a sliding session expiration window (auto-logging out stale sessions), implemented global CORS policies, and built a dedicated Settings panel for password changes and destructive account deletions.
-- **Complete UI Overhaul**: Transitioned completely off native emojis in favor of scalable Lucide SVG icons. Added loading spinners globally to block excessive user input, and transformed the large sidebar into a responsive, native-feeling bottom navigation bar for mobile web users.
+**Why a delta evaluation track?** Absolute mood prediction conflates regression-to-the-mean with genuine predictive signal. Predicting the change from current mood to future mood is a harder and more honest benchmark.
 
 ---
 
@@ -184,15 +197,18 @@ cd Journal-analytics-dashboard
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-touch .env
 ```
 
-Add to `.env`:
+NLTK data (first run only):
+```bash
+python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet'); nltk.download('omw-1.4')"
+```
 
-```text
+Create `.env`:
+```
 SECRET_KEY=your-random-secret-key
 OPENROUTER_API_KEY=your-openrouter-api-key
-# Optional: Supabase PostgreSQL connection string
+# Optional — Supabase PostgreSQL. Omit for local SQLite.
 # DATABASE_URL=postgresql://...
 ```
 
@@ -202,27 +218,45 @@ OPENROUTER_API_KEY=your-openrouter-api-key
 python main.py
 ```
 
-Access at `http://127.0.0.1:5000`.
+Available at `http://127.0.0.1:5000`.
+
+### Run evaluations
+
+```bash
+cd evaluation
+python evaluate_lexicon.py      # Bayesian lexicon benchmark
+python evaluate_forecasting.py  # Ridge forecasting benchmark
+python evaluate_delta.py        # Delta prediction comparison
+```
+
+Results are appended to `experiments_log.csv`.
 
 ---
 
 ## Production Deployment
 
-The app is deployed on Hugging Face Spaces as a containerized Flask service.
+Deployed on Hugging Face Spaces as a containerized Flask service.
 
-The `Dockerfile` pulls `python:3.12-slim`, installs dependencies, and pre-bakes the `all-MiniLM-L6-v2` sentence-transformer model to avoid cold starts.
+The `Dockerfile` pulls `python:3.12-slim`, installs dependencies, and pre-bakes `all-MiniLM-L6-v2` to avoid cold starts. The app runs via Gunicorn: `gunicorn main:app --bind 0.0.0.0:7860`.
 
-Required environment variables in the Spaces settings: `SECRET_KEY`, `OPENROUTER_API_KEY`, and optionally `DATABASE_URL` for Supabase PostgreSQL.
+CSRF is handled via a custom `before_request` hook — `secrets.token_hex(32)` stored in session, validated on all mutating requests against both the form field and `X-CSRFToken` header (for AJAX calls).
 
-The app runs via: `gunicorn main:app --bind 0.0.0.0:7860`
+Required Spaces secrets: `SECRET_KEY`, `OPENROUTER_API_KEY`. For Supabase: `DATABASE_URL` (note: no trailing whitespace — the PostgreSQL driver will reject the connection silently).
 
 ---
 
-## Planned Improvements
+## Known Limitations
 
-- CSRF protection on all form endpoints
-- Supabase Auth integration with Row Level Security
-- Retraining pipeline on real user data (currently trains on synthetic data)
+- Training data is synthetic. The ML pipeline works end-to-end, but benchmark numbers reflect synthetic distributions rather than real user behavior.
+- Chat history is not persisted across sessions.
+- Retrieval ranking uses dot-product similarity — no reranking step.
+
+---
+
+## Planned
+
+- Retrain on real user data once sufficient entries are collected
+- Supabase Auth with Row Level Security
 - Persistent multi-turn chat history
 - LLM response caching for repeated queries
-- Improved retrieval ranking in the RAG pipeline
+- Reranker on top of the retrieval step
