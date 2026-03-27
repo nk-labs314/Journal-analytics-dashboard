@@ -441,7 +441,7 @@ def health():
         engine = get_engine()
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        return {"status": "ok", "database": "ok"}, 200
+        return {"status": "new_code", "database": "ok"}, 200
     except Exception:
         logger.exception("Health check failed")
         return {"status": "error", "database": "error"}, 500
