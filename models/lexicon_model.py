@@ -17,6 +17,19 @@ logger = logging.getLogger(__name__)
 lemmatizer = WordNetLemmatizer()
 stop_words = None
 
+NEGATION_WORDS = {
+    "not", "no", "never", "none", "neither", "nor", "cannot", "can't", "don't",
+    "didn't", "doesn't", "isn't", "aren't", "wasn't", "weren't", "hasn't",
+    "haven't", "hadn't", "won't", "wouldn't", "shouldn't", "couldn't",
+    "mightn't", "mustn't"
+}
+
+HIGH_VALENCE_OVERRIDES = {
+    "kill": -4.0, "suicide": -5.0, "suicidal": -5.0, "worthless": -4.0,
+    "hopeless": -4.0, "anxious": -2.0, "depressed": -3.0, "sad": -2.0,
+    "productive": 2.0, "great": 2.0, "happy": 2.0
+}
+
 
 def _prepare_nltk_data():
     # In production (Docker), NLTK data is pre-downloaded via the Dockerfile.
@@ -44,6 +57,7 @@ def _get_stopwords():
     _prepare_nltk_data()
     try:
         stop_words = set(stopwords.words("english"))
+        stop_words = stop_words - NEGATION_WORDS
     except LookupError:
         logger.warning("NLTK stopwords unavailable; continuing with empty stopword set.")
         stop_words = set()
@@ -137,6 +151,9 @@ def get_word_score(
     global_mean,
     k=10
 ):
+    if word in HIGH_VALENCE_OVERRIDES:
+        return HIGH_VALENCE_OVERRIDES[word]
+
     if word not in global_lexicon:
         return None
 
@@ -165,13 +182,17 @@ def predict_mood_from_text(
     global_mean,
     k=10
 ):
-    words = set(tokenize(text))
+    tokens = tokenize(text)
 
     scores = []
     contributions = []
+    scored_words = set()
 
-    for w in words:
-        score = get_word_score(
+    for i, w in enumerate(tokens):
+        if w in scored_words:
+            continue
+
+        base_score = get_word_score(
             w,
             global_lexicon,
             global_counts,
@@ -181,9 +202,17 @@ def predict_mood_from_text(
             k
         )
 
-        if score is not None:
-            scores.append(score)
-            contributions.append((w, score))
+        if base_score is not None:
+            # Check for negation in the 2 preceding tokens
+            window_start = max(0, i - 2)
+            preceding_tokens = tokens[window_start:i]
+            is_negated = any(t in NEGATION_WORDS for t in preceding_tokens)
+
+            final_score = -base_score if is_negated else base_score
+
+            scores.append(final_score)
+            contributions.append((w, final_score))
+            scored_words.add(w)
 
     if not scores:
         return global_mean, []

@@ -35,12 +35,13 @@ class LexiconService:
 
     def analyze_text(self, text, user_df=None, user_id=1):
         # Build user lexicon from their journal history if available
-        if user_df is not None and not user_df.empty:
-            # lexicon_model expects columns: user_id, text, mood_score
-            user_df = user_df.rename(columns={"journal_entry": "text"})
+        if user_df is not None and not user_df.empty and len(user_df) >= 10:
+            user_df = user_df.copy()
+            if "journal_entry" in user_df.columns and "text" not in user_df.columns:
+                user_df = user_df.rename(columns={"journal_entry": "text"})
             user_df["user_id"] = user_id
             user_lexicon, user_counts = build_user_lexicon(
-                user_df, user_id=user_id, min_freq=2
+                user_df, user_id=user_id, min_freq=3
             )
         else:
             user_lexicon, user_counts = {}, {}
