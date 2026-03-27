@@ -14,22 +14,14 @@ from sqlalchemy import text
 from services.data_service import get_engine
 import logging
 from services.forecast_service import ForecastService
-from services.data_service import get_all_journals
 from services.lexicon_service import LexiconService
 from services import auth_service
 from services.embedding_service import EmbeddingService
 from services.rag_service import RAGService
-from services.demo_service import reset_demo_account
-DEMO_USERNAME = "demo_acc"
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-forecast_service = ForecastService()
-lexicon_service = LexiconService()
-embedding_service = EmbeddingService()
-rag_service = RAGService(embedding_service, Config.HUGGINGFACE_API_KEY)
 
 
 def init_db():
@@ -126,6 +118,11 @@ app.config.update(
 )
 app.secret_key = app.config["SECRET_KEY"]
 
+forecast_service = ForecastService()
+lexicon_service = LexiconService()
+embedding_service = EmbeddingService()
+rag_service = RAGService(embedding_service, Config.HUGGINGFACE_API_KEY)
+
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -149,22 +146,11 @@ def register():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
-        if not username or not password:
-            flash("Username and password are required.")
+        user_id, error = auth_service.register_user(username, password)
+        if error:
+            flash(error)
             return redirect(url_for("register"))
 
-        try:
-            created = auth_service.create_user(username, password)
-        except Exception:
-            logger.exception("Registration failed due to database error")
-            flash("Registration failed. Please try again in a moment.")
-            return redirect(url_for("register"))
-
-        if not created:
-            flash("Username already exists.")
-            return redirect(url_for("register"))
-
-        user_id = auth_service.verify_user(username, password)
         session["user_id"] = user_id
         session["username"] = username
         flash("Account created.")
@@ -176,7 +162,6 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
 def login():
-    print("LOGIN START")
     if "user_id" in session:
         return redirect(url_for("home"))
 
@@ -184,31 +169,14 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
-        try:
-            print("CALLING verify_user")
-            user_id = auth_service.verify_user(username, password)
-            print("verify_user RETURNED:", user_id)
-        except Exception:
-            print("VERIFY USER ERROR:", e)
-            logger.exception("Login failed due to database error")
-            flash("Login failed. Please try again in a moment.")
+        user_id, error = auth_service.login_user(username, password)
+        if error:
+            flash(error)
             return redirect(url_for("login"))
 
-        if user_id is None:
-            print("INVALID USER")
-            flash("Invalid username or password.")
-            return redirect(url_for("login"))
-
-        if username == DEMO_USERNAME:
-            try:
-                reset_demo_account()
-            except Exception:
-                logger.exception("Demo reset failed")
-        print("SETTING SESSION")
         session["user_id"] = user_id
         session["username"] = username
         flash("Logged in successfully.")
-        print("REDIRECTING TO HOME")
         return redirect(url_for("home"))
 
     return render_template("login.html", mode="login")
@@ -270,19 +238,17 @@ def dashboard():
     df_mood = data_service.get_recent_mood(user_id)
     df_behavior = data_service.get_recent_behavior(user_id)
     df_all_journals = data_service.get_all_journals(user_id)
-    df_journals = data_service.get_all_journals(user_id)
-
 
     analysis = analytics_service.compute_dashboard_analysis(
-    df_mood,
-    df_behavior,
-    df_all_journals,
-    df_journals,
-    insight_service.interpret_correlation,
-    insight_service.analyze_sentiment,
-    insight_service.detect_mood_trend,
-    insight_service.analyze_behavior,
-    user_id
+        df_mood,
+        df_behavior,
+        df_all_journals,
+        df_all_journals,
+        insight_service.interpret_correlation,
+        insight_service.analyze_sentiment,
+        insight_service.detect_mood_trend,
+        insight_service.analyze_behavior,
+        user_id
     )
     return render_template('dashboard.html', analysis=analysis)
 
@@ -300,9 +266,8 @@ def journals():
 def forecast():
     user_id = session["user_id"]
 
-    user_df = get_all_journals(user_id)
+    user_df = data_service.get_all_journals(user_id)
     predictions = forecast_service.predict(user_df)
-
 
     return render_template(
         "forecast.html",
@@ -368,7 +333,7 @@ def chat():
 
             # Get forecast
             try:
-                user_df = get_all_journals(user_id)
+                user_df = data_service.get_all_journals(user_id)
                 predictions = forecast_service.predict(user_df) or {}
             except Exception:
                 logger.exception("Failed to get forecast for chat context")
@@ -414,10 +379,11 @@ def health():
 
 
 
-try:
-    init_db()
-except Exception:
-    logger.exception("Database initialization failed")
+with app.app_context():
+    try:
+        init_db()
+    except Exception:
+        logger.exception("Database initialization failed")
 
 
 @app.errorhandler(500)
