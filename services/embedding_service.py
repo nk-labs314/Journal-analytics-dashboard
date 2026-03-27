@@ -1,4 +1,5 @@
 import logging
+import time
 from sentence_transformers import SentenceTransformer
 import numpy as np
 
@@ -16,8 +17,9 @@ class EmbeddingService:
     def model(self):
         if self._model is None:
             logger.info("Loading sentence-transformer model: %s (first use)", MODEL_NAME)
+            start_time = time.time()
             self._model = SentenceTransformer(MODEL_NAME)
-            logger.info("Sentence-transformer model loaded successfully")
+            logger.info("Sentence-transformer model loaded successfully in %.2fs", time.time() - start_time)
         return self._model
 
     def embed(self, text: str) -> np.ndarray:

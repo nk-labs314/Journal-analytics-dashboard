@@ -56,7 +56,7 @@ def init_db():
     if engine.dialect.name == "sqlite":
         entry_embeddings_sql = """
             CREATE TABLE IF NOT EXISTS EntryEmbeddings (
-                id SERIAL PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 log_id INTEGER NOT NULL,
                 embedding BLOB NOT NULL,
@@ -407,6 +407,7 @@ def health():
 with app.app_context():
     try:
         init_db()
+        embedding_service.embed("warmup")
     except Exception:
         logger.exception("Database initialization failed")
 
