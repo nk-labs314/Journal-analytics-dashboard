@@ -113,7 +113,7 @@ def login_required(view_func):
 
 from flask import Blueprint
 
-main_bp = Blueprint("main", __name__)
+main_bp = Blueprint("main", __name__,template_folder="../templates")
 
 forecast_service = None
 lexicon_service = None
