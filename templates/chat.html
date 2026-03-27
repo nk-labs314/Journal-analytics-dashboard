@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>💬 AI Chat</h1>
+    <h1>AI Chat</h1>
     <div class="header-actions">
         <span class="card-badge">Powered by RAG</span>
     </div>
@@ -12,41 +12,170 @@
 
 <div class="card chat-container">
     <div class="chat-messages" id="chatMessages">
-        {% if not response and not query %}
-        <div class="empty-state">
-            <div class="empty-icon">💬</div>
+        <div class="empty-state" id="emptyState">
             <h3>Ask about your mood patterns</h3>
             <p>Try questions like "Why has my mood been declining?", "What patterns do you see?", or "How has my sleep
                 affected my mood?"</p>
         </div>
-        {% endif %}
-
-        {% if query %}
-        <div class="chat-message user">
-            <div class="message-avatar">{{ session.get('username', '?')[0]|upper }}</div>
-            <div class="message-content">
-                <div class="message-sender">You</div>
-                <div class="message-text">{{ query }}</div>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if response %}
-        <div class="chat-message assistant">
-            <div class="message-avatar">🤖</div>
-            <div class="message-content">
-                <div class="message-sender">MoodLens AI</div>
-                <div class="message-text">{{ response }}</div>
-            </div>
-        </div>
-        {% endif %}
     </div>
 
-    <form method="POST" class="chat-input-area">
-        <textarea name="query" placeholder="Ask about your mood, patterns, or insights..." rows="2" required></textarea>
-        <button type="submit" class="btn btn-primary" style="align-self: flex-end;">
-            Send 🚀
+    <div class="chat-input-area" id="chatInputArea">
+        <textarea id="chatInput" placeholder="Ask about your mood, patterns, or insights..." rows="2"></textarea>
+        <button type="button" class="btn btn-primary" id="sendBtn" style="align-self: flex-end;">
+            Send
         </button>
-    </form>
+    </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    const messagesEl = document.getElementById('chatMessages');
+    const inputEl = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const emptyState = document.getElementById('emptyState');
+
+    // Conversation history for multi-turn context
+    const chatHistory = [];
+
+    function scrollToBottom() {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function hideEmptyState() {
+        if (emptyState) emptyState.style.display = 'none';
+    }
+
+    function appendMessage(role, text) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'chat-message ' + role;
+
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'message-avatar';
+
+        if (role === 'user') {
+            const username = '{{ session.get("username", "?") }}';
+            avatarDiv.textContent = username.charAt(0).toUpperCase();
+        } else {
+            avatarDiv.textContent = 'AI';
+        }
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+
+        const senderDiv = document.createElement('div');
+        senderDiv.className = 'message-sender';
+        senderDiv.textContent = role === 'user' ? 'You' : 'MoodLens AI';
+
+        const textDiv = document.createElement('div');
+        textDiv.className = 'message-text';
+        textDiv.textContent = text;
+
+        contentDiv.appendChild(senderDiv);
+        contentDiv.appendChild(textDiv);
+        msgDiv.appendChild(avatarDiv);
+        msgDiv.appendChild(contentDiv);
+        messagesEl.appendChild(msgDiv);
+        scrollToBottom();
+
+        return textDiv;
+    }
+
+    function showLoading() {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'chat-message assistant';
+        loadingDiv.id = 'loadingMsg';
+
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'message-avatar';
+        avatarDiv.textContent = 'AI';
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+
+        const senderDiv = document.createElement('div');
+        senderDiv.className = 'message-sender';
+        senderDiv.textContent = 'MoodLens AI';
+
+        const textDiv = document.createElement('div');
+        textDiv.className = 'message-text loading-dots';
+        textDiv.textContent = 'Thinking...';
+
+        contentDiv.appendChild(senderDiv);
+        contentDiv.appendChild(textDiv);
+        loadingDiv.appendChild(avatarDiv);
+        loadingDiv.appendChild(contentDiv);
+        messagesEl.appendChild(loadingDiv);
+        scrollToBottom();
+    }
+
+    function removeLoading() {
+        const el = document.getElementById('loadingMsg');
+        if (el) el.remove();
+    }
+
+    function setLoading(isLoading) {
+        sendBtn.disabled = isLoading;
+        inputEl.disabled = isLoading;
+        sendBtn.textContent = isLoading ? 'Sending...' : 'Send';
+        if (isLoading) {
+            showLoading();
+        } else {
+            removeLoading();
+        }
+    }
+
+    async function sendMessage() {
+        const query = inputEl.value.trim();
+        if (!query) return;
+
+        hideEmptyState();
+        appendMessage('user', query);
+        inputEl.value = '';
+        setLoading(true);
+
+        try {
+            const resp = await fetch('/chat/message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: query, history: chatHistory })
+            });
+
+            const data = await resp.json();
+
+            if (data.error) {
+                setLoading(false);
+                appendMessage('assistant', 'Error: ' + data.error);
+                return;
+            }
+
+            // Update history
+            chatHistory.push({ role: 'user', content: query });
+            chatHistory.push({ role: 'assistant', content: data.response });
+
+            setLoading(false);
+            appendMessage('assistant', data.response);
+
+        } catch (err) {
+            setLoading(false);
+            appendMessage('assistant', 'Something went wrong. Please try again.');
+        }
+    }
+
+    // Send button click
+    sendBtn.addEventListener('click', sendMessage);
+
+    // Enter to send, Shift+Enter for newline
+    inputEl.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // Focus input on page load
+    inputEl.focus();
+})();
+</script>
 {% endblock %}

@@ -46,7 +46,7 @@ class RAGService:
             logger.exception("Retrieval failed for user %s", user_id)
             return []
 
-    def generate(self, query: str, retrieved_entries: list, analytics: dict, forecast: dict) -> str:
+    def generate(self, query: str, retrieved_entries: list, analytics: dict, forecast: dict, history: list = None) -> str:
         """Build context from retrieved entries + analytics + forecast, then generate response via LLM."""
 
         if not retrieved_entries:
@@ -90,13 +90,21 @@ Mood forecast:
             "Give specific, grounded insights based only on the data provided. "
             "Do not give therapy or clinical advice. "
             "Do not make things up. If the data doesn't support a conclusion, say so. "
-            "Keep responses concise and helpful."
+            "Keep responses concise and helpful. "
+            "If the user asks anything unrelated to their mood data, journal history, "
+            "sleep, activity, or behavioral patterns, respond with: "
+            "'I can only answer questions about your journal and mood data.' "
+            "Do not answer general knowledge questions, coding questions, "
+            "or anything outside this scope."
         )
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"}
-        ]
+        messages = [{"role": "system", "content": system_prompt}]
+
+        # Add conversation history for multi-turn context
+        if history:
+            messages.extend(history)
+
+        messages.append({"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"})
 
         try:
             response = self.client.chat.completions.create(

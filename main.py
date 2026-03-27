@@ -298,50 +298,75 @@ def insights():
     )
 
 
-@app.route("/chat", methods=["GET", "POST"])
+@app.route("/chat")
+@login_required
+def chat():
+    return render_template("chat.html")
+
+
+# Keywords that indicate a mood/journal-related query
+MOOD_KEYWORDS = {
+    "mood", "feel", "feeling", "felt", "sleep", "journal", "sad", "happy",
+    "anxiety", "anxious", "stress", "stressed", "pattern", "trend", "forecast",
+    "depressed", "depression", "emotion", "emotional", "angry", "anger",
+    "tired", "energy", "activity", "social", "well-being", "wellbeing",
+    "mental", "health", "score", "entry", "entries", "week", "month",
+    "improve", "decline", "better", "worse", "why", "how", "what",
+}
+
+
+@app.route("/chat/message", methods=["POST"])
 @login_required
 @limiter.limit("5 per minute")
-def chat():
-    response = None
-    query = ""
+def chat_message():
+    data = request.get_json(silent=True)
+    if not data or not data.get("query", "").strip():
+        return jsonify({"error": "Query is required."}), 400
 
-    if request.method == "POST":
-        query = request.form.get("query", "").strip()
-        user_id = session["user_id"]
+    query = data["query"].strip()
+    history = data.get("history", [])
+    user_id = session["user_id"]
 
-        if query:
-            # Retrieve similar entries
-            retrieved = rag_service.retrieve(query, user_id)
+    # Retrieve similar entries
+    retrieved = rag_service.retrieve(query, user_id)
 
-            # Get analytics context
-            try:
-                df_mood = data_service.get_recent_mood(user_id)
-                df_behavior = data_service.get_recent_behavior(user_id)
-                df_all_journals = data_service.get_all_journals(user_id)
+    # Relevance pre-check: if no entries found and query has no mood keywords, refuse
+    query_lower = query.lower()
+    query_words = set(query_lower.split())
+    if not retrieved and not query_words.intersection(MOOD_KEYWORDS):
+        return jsonify({
+            "response": "I can only answer questions about your journal and mood data."
+        })
 
-                analytics = analytics_service.compute_dashboard_analysis(
-                    df_mood, df_behavior, df_all_journals, df_all_journals,
-                    insight_service.interpret_correlation,
-                    insight_service.analyze_sentiment,
-                    insight_service.detect_mood_trend,
-                    insight_service.analyze_behavior,
-                    user_id
-                )
-            except Exception:
-                logger.exception("Failed to compute analytics for chat context")
-                analytics = {}
+    # Get analytics context
+    try:
+        df_mood = data_service.get_recent_mood(user_id)
+        df_behavior = data_service.get_recent_behavior(user_id)
+        df_all_journals = data_service.get_all_journals(user_id)
 
-            # Get forecast
-            try:
-                user_df = data_service.get_all_journals(user_id)
-                predictions = forecast_service.predict(user_df) or {}
-            except Exception:
-                logger.exception("Failed to get forecast for chat context")
-                predictions = {}
+        analytics = analytics_service.compute_dashboard_analysis(
+            df_mood, df_behavior, df_all_journals, df_all_journals,
+            insight_service.interpret_correlation,
+            insight_service.analyze_sentiment,
+            insight_service.detect_mood_trend,
+            insight_service.analyze_behavior,
+            user_id
+        )
+    except Exception:
+        logger.exception("Failed to compute analytics for chat context")
+        analytics = {}
 
-            response = rag_service.generate(query, retrieved, analytics, predictions)
+    # Get forecast
+    try:
+        user_df = data_service.get_all_journals(user_id)
+        predictions = forecast_service.predict(user_df) or {}
+    except Exception:
+        logger.exception("Failed to get forecast for chat context")
+        predictions = {}
 
-    return render_template("chat.html", response=response, query=query)
+    response = rag_service.generate(query, retrieved, analytics, predictions, history=history)
+
+    return jsonify({"response": response})
 
 
 @app.route("/health")
