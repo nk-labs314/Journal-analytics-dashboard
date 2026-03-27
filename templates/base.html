@@ -23,39 +23,45 @@
 
             <ul class="sidebar-nav">
                 <li>
-                    <a href="{{ url_for('home') }}" class="{% if request.endpoint == 'home' %}active{% endif %}">
+                    <a href="{{ url_for('main.home') }}" class="{% if request.endpoint == 'main.home' %}active{% endif %}">
                         <span class="nav-icon">🏠</span>
                         <span class="nav-text">Home</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <a href="{{ url_for('main.dashboard') }}" class="{% if request.endpoint == 'main.dashboard' %}active{% endif %}">
                         <span class="nav-icon">📊</span>
                         <span class="nav-text">Dashboard</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ url_for('journals') }}" class="{% if request.endpoint == 'journals' %}active{% endif %}">
+                    <a href="{{ url_for('main.journals') }}" class="{% if request.endpoint == 'main.journals' %}active{% endif %}">
                         <span class="nav-icon">📝</span>
                         <span class="nav-text">Journals</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ url_for('forecast') }}" class="{% if request.endpoint == 'forecast' %}active{% endif %}">
+                    <a href="{{ url_for('main.forecast') }}" class="{% if request.endpoint == 'main.forecast' %}active{% endif %}">
                         <span class="nav-icon">🔮</span>
                         <span class="nav-text">Forecast</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ url_for('insights') }}" class="{% if request.endpoint == 'insights' %}active{% endif %}">
+                    <a href="{{ url_for('main.insights') }}" class="{% if request.endpoint == 'main.insights' %}active{% endif %}">
                         <span class="nav-icon">💡</span>
                         <span class="nav-text">Insights</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ url_for('chat') }}" class="{% if request.endpoint == 'chat' %}active{% endif %}">
+                    <a href="{{ url_for('main.chat') }}" class="{% if request.endpoint == 'main.chat' %}active{% endif %}">
                         <span class="nav-icon">💬</span>
                         <span class="nav-text">AI Chat</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('main.settings') }}" class="{% if request.endpoint == 'main.settings' %}active{% endif %}">
+                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-text">Settings</span>
                     </a>
                 </li>
             </ul>
@@ -68,7 +74,7 @@
                         <div class="user-role">Member</div>
                     </div>
                 </div>
-                <a href="{{ url_for('logout') }}" class="btn btn-ghost" style="width:100%; justify-content:center; margin-top:8px;">
+                <a href="{{ url_for('main.logout') }}" class="btn btn-ghost" style="width:100%; justify-content:center; margin-top:8px;">
                     🚪 <span class="nav-text">Logout</span>
                 </a>
             </div>
@@ -94,3 +100,4 @@
     {% block scripts %}{% endblock %}
 </body>
 </html>
+

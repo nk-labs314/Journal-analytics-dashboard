@@ -105,7 +105,7 @@ def login_required(view_func):
     def wrapper(*args, **kwargs):
         if "user_id" not in session:
             flash("Please log in to continue.")
-            return redirect(url_for("login"))
+            return redirect(url_for("main.login"))
         return view_func(*args, **kwargs)
 
     return wrapper
@@ -161,21 +161,23 @@ def home():
 @limiter.limit("5 per minute")
 def register():
     if "user_id" in session:
-        return redirect(url_for("home"))
+        return redirect(url_for("main.home"))
 
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
-        user_id, error = auth_service.register_user(username, password)
+        user_id, auth_hash, error = auth_service.register_user(username, password)
         if error:
             flash(error)
-            return redirect(url_for("register"))
+            return redirect(url_for("main.register"))
 
         session["user_id"] = user_id
         session["username"] = username
+        session["auth_hash"] = auth_hash
+        session.permanent = True
         flash("Account created.")
-        return redirect(url_for("home"))
+        return redirect(url_for("main.home"))
 
     return render_template("login.html", mode="register")
 
@@ -184,21 +186,23 @@ def register():
 @limiter.limit("5 per minute")
 def login():
     if "user_id" in session:
-        return redirect(url_for("home"))
+        return redirect(url_for("main.home"))
 
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
-        user_id, error = auth_service.login_user(username, password)
+        user_id, auth_hash, error = auth_service.login_user(username, password)
         if error:
             flash(error)
-            return redirect(url_for("login"))
+            return redirect(url_for("main.login"))
 
         session["user_id"] = user_id
         session["username"] = username
+        session["auth_hash"] = auth_hash
+        session.permanent = True
         flash("Logged in successfully.")
-        return redirect(url_for("home"))
+        return redirect(url_for("main.home"))
 
     return render_template("login.html", mode="login")
 
@@ -207,7 +211,7 @@ def login():
 def logout():
     session.clear()
     flash("Logged out.")
-    return redirect(url_for("login"))
+    return redirect(url_for("main.login"))
 
 @main_bp.route('/log', methods=['POST'])
 @login_required
@@ -247,7 +251,7 @@ def log_entry():
         # Don't fail the whole request if embedding fails
 
     flash("Entry saved successfully!")
-    return redirect(url_for('home'))
+    return redirect(url_for('main.home'))
 
 
 
@@ -323,6 +327,41 @@ def insights():
 @login_required
 def chat():
     return render_template("chat.html")
+
+
+@main_bp.route("/settings", methods=["GET", "POST"])
+@login_required
+def settings():
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "change_password":
+            old_pw = request.form.get("old_password", "")
+            new_pw = request.form.get("new_password", "")
+            if not old_pw or not new_pw:
+                flash("Both fields are required.")
+                return redirect(url_for("main.settings"))
+
+            success, result = auth_service.change_password(session["user_id"], old_pw, new_pw)
+            if success:
+                session["auth_hash"] = result  # new auth_hash
+                flash("Password changed successfully.")
+            else:
+                flash(result)
+            return redirect(url_for("main.settings"))
+
+        elif action == "delete_account":
+            password = request.form.get("password", "")
+            success, error = auth_service.delete_account(session["user_id"], password)
+            if success:
+                session.clear()
+                flash("Account deleted.")
+                return redirect(url_for("main.login"))
+            else:
+                flash(error)
+                return redirect(url_for("main.settings"))
+
+    return render_template("settings.html")
 
 
 # Keywords that indicate a mood/journal-related query
@@ -463,6 +502,16 @@ def create_app(config_class=Config):
 
     if app_instance.config.get("TESTING"):
         pass
+
+    # CORS headers
+    @app_instance.after_request
+    def add_cors_headers(response):
+        allowed = app_instance.config.get("CORS_ORIGINS", "*")
+        response.headers["Access-Control-Allow-Origin"] = allowed
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-CSRFToken"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
 
     app_instance.register_blueprint(main_bp)
 

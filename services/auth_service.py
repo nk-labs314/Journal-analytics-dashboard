@@ -113,10 +113,10 @@ def login_user(username, password):
     """Authenticate a user and handle demo account reset.
 
     Returns:
-        (user_id, None) on success, (None, error_message) on failure.
+        (user_id, auth_hash, error) — error is None on success.
     """
     if not username or not password:
-        return None, "Username and password are required."
+        return None, None, "Username and password are required."
 
     try:
         result = verify_user(username, password)
@@ -126,7 +126,7 @@ def login_user(username, password):
 
     if result is None:
         return None, None, "Invalid username or password."
-        
+
     user_id, auth_hash = result
 
     if username == DEMO_USERNAME:
@@ -142,10 +142,10 @@ def register_user(username, password):
     """Register a new user account.
 
     Returns:
-        (user_id, None) on success, (None, error_message) on failure.
+        (user_id, auth_hash, error) — error is None on success.
     """
     if not username or not password:
-        return None, "Username and password are required."
+        return None, None, "Username and password are required."
 
     try:
         created = create_user(username, password)
@@ -156,4 +156,8 @@ def register_user(username, password):
     if not created:
         return None, None, "Username already exists."
 
-    return verify_user(username, password) + (None,)
+    result = verify_user(username, password)
+    if result is None:
+        return None, None, "Account created but login failed."
+    user_id, auth_hash = result
+    return user_id, auth_hash, None

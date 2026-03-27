@@ -38,9 +38,9 @@
 
         <div class="auth-footer">
             {% if mode == "register" %}
-            Already have an account? <a href="{{ url_for('login') }}">Sign In</a>
+            Already have an account? <a href="{{ url_for('main.login') }}">Sign In</a>
             {% else %}
-            No account yet? <a href="{{ url_for('register') }}">Create one</a>
+            No account yet? <a href="{{ url_for('main.register') }}">Create one</a>
             {% endif %}
         </div>
     </div>
