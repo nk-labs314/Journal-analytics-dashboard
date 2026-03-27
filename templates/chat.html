@@ -136,9 +136,13 @@
         setLoading(true);
 
         try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
             const resp = await fetch('/chat/message', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
                 body: JSON.stringify({ query: query, history: chatHistory })
             });
 

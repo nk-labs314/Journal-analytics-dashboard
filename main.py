@@ -3,9 +3,10 @@ import os
 from functools import wraps
 from datetime import date
 from langdetect import detect
-from flask import Flask, flash, render_template, request, redirect, session, url_for, jsonify
+from flask import Flask, flash, render_template, request, redirect, session, url_for, jsonify, abort
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import secrets
 from services import analytics_service
 from services import data_service
 from services import insight_service
@@ -123,6 +124,32 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"],
     storage_uri="memory://"
 )
+
+@main_bp.before_request
+def auth_and_csrf_checks():
+    # Slide session expiry
+    session.modified = True
+
+    # CSRF Protection
+    if request.method == "POST":
+        token = session.get("_csrf_token")
+        if not token or (token != request.form.get("csrf_token") and token != request.headers.get("X-CSRFToken")):
+            abort(403)
+
+    # Global active session invalidation (auth_hash matching)
+    if "user_id" in session:
+        auth_hash = auth_service.get_user_auth(session["user_id"])
+        if not auth_hash or auth_hash != session.get("auth_hash"):
+            session.clear()
+            flash("Your session is invalid or your password was changed. Please log in again.")
+            return redirect(url_for('main.login'))
+
+
+def generate_csrf_token():
+    if "_csrf_token" not in session:
+        session["_csrf_token"] = secrets.token_hex(32)
+    return session["_csrf_token"]
+
 
 @main_bp.route('/')
 @login_required
@@ -423,6 +450,8 @@ def create_app(config_class=Config):
         level=logging.INFO,
         force=True
     )
+
+    app_instance.jinja_env.globals['csrf_token'] = generate_csrf_token
 
     limiter.init_app(app_instance)
 

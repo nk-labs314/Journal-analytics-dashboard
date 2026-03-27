@@ -51,7 +51,62 @@ def verify_user(username, password):
     if not check_password_hash(row.password_hash, password):
         return None
 
-    return int(row.user_id)
+    # Return (user_id, shortened hash string for session invalidation)
+    return int(row.user_id), row.password_hash[:10]
+
+
+def get_user_auth(user_id):
+    query = text("SELECT password_hash FROM AuthUsers WHERE user_id = :user_id")
+    with get_engine().connect() as conn:
+        row = conn.execute(query, {"user_id": user_id}).fetchone()
+    return row.password_hash[:10] if row else None
+
+
+def change_password(user_id, old_password, new_password):
+    engine = get_engine()
+
+    # Verify old
+    query = text("SELECT password_hash FROM AuthUsers WHERE user_id = :user_id")
+    with engine.connect() as conn:
+        row = conn.execute(query, {"user_id": user_id}).fetchone()
+
+    if not row or not check_password_hash(row.password_hash, old_password):
+        return False, "Incorrect old password."
+
+    new_hash = generate_password_hash(new_password)
+    update_query = text("UPDATE AuthUsers SET password_hash = :new_hash WHERE user_id = :user_id")
+    
+    try:
+        with engine.begin() as conn:
+            conn.execute(update_query, {"new_hash": new_hash, "user_id": user_id})
+        return True, new_hash[:10]
+    except Exception:
+        logger.exception("Failed to change password")
+        return False, "Database error."
+
+
+def delete_account(user_id, password):
+    engine = get_engine()
+
+    query = text("SELECT password_hash FROM AuthUsers WHERE user_id = :user_id")
+    with engine.connect() as conn:
+        row = conn.execute(query, {"user_id": user_id}).fetchone()
+
+    if not row or not check_password_hash(row.password_hash, password):
+        return False, "Incorrect password."
+
+    # Drop all related data
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("DELETE FROM MoodLogs WHERE user_id = :user_id"), {"user_id": user_id})
+            conn.execute(text("DELETE FROM BehaviorData WHERE user_id = :user_id"), {"user_id": user_id})
+            conn.execute(text("DELETE FROM EntryEmbeddings WHERE user_id = :user_id"), {"user_id": user_id})
+            conn.execute(text("DELETE FROM MoodUsers WHERE user_id = :user_id"), {"user_id": user_id})
+            conn.execute(text("DELETE FROM AuthUsers WHERE user_id = :user_id"), {"user_id": user_id})
+        return True, None
+    except Exception:
+        logger.exception("Failed to delete account")
+        return False, "Database error."
 
 
 def login_user(username, password):
@@ -64,13 +119,15 @@ def login_user(username, password):
         return None, "Username and password are required."
 
     try:
-        user_id = verify_user(username, password)
+        result = verify_user(username, password)
     except Exception as e:
         logger.exception("Login failed due to database error")
-        return None, "Login failed. Please try again in a moment."
+        return None, None, "Login failed. Please try again in a moment."
 
-    if user_id is None:
-        return None, "Invalid username or password."
+    if result is None:
+        return None, None, "Invalid username or password."
+        
+    user_id, auth_hash = result
 
     if username == DEMO_USERNAME:
         try:
@@ -78,7 +135,7 @@ def login_user(username, password):
         except Exception:
             logger.exception("Demo reset failed")
 
-    return user_id, None
+    return user_id, auth_hash, None
 
 
 def register_user(username, password):
@@ -94,10 +151,9 @@ def register_user(username, password):
         created = create_user(username, password)
     except Exception:
         logger.exception("Registration failed due to database error")
-        return None, "Registration failed. Please try again in a moment."
+        return None, None, "Registration failed. Please try again in a moment."
 
     if not created:
-        return None, "Username already exists."
+        return None, None, "Username already exists."
 
-    user_id = verify_user(username, password)
-    return user_id, None
+    return verify_user(username, password) + (None,)

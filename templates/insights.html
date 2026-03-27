@@ -15,6 +15,7 @@
             <span class="card-badge">Lexicon Model</span>
         </div>
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="form-group">
                 <label>Enter text to analyze</label>
                 <textarea name="text" class="form-control" rows="6"

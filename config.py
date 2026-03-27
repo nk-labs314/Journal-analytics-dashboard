@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from datetime import timedelta
 
 # Load secret variables from .env file into standard environment variables
 load_dotenv()
@@ -7,6 +8,7 @@ load_dotenv()
 class Config:
     # Flask
     SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret_key")
+    PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
 
     # Database
     # Default: SQLite file in project root
