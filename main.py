@@ -113,7 +113,7 @@ def login_required(view_func):
 
 from flask import Blueprint
 
-main_bp = Blueprint("main", __name__,template_folder="../templates")
+main_bp = Blueprint("main", __name__)
 
 forecast_service = None
 lexicon_service = None
@@ -466,8 +466,13 @@ def warm_embedding_model():
         logger.exception("Background embedding warmup failed")
 
 def create_app(config_class=Config):
-    app_instance = Flask(__name__)
-    app_instance.static_folder = 'static'
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    app_instance = Flask(
+        __name__,
+        template_folder=os.path.join(base_dir, "templates"),
+        static_folder=os.path.join(base_dir, "static"),
+    )
     app_instance.config.from_object(config_class)
     app_instance.config.update(
         SESSION_COOKIE_SAMESITE="None",
