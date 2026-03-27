@@ -41,7 +41,7 @@ You write a journal entry. The system scores it with a personalized Bayesian lex
         v                  v                   v
 +--------------+  +----------------+  +--------------------+
 |  Supabase DB |  | Embedding Model|  |   OpenRouter LLM   |
-| (PostgreSQL) |  | MiniLM-L6-v2   |  |   (Mistral-7B)     |
+| (PostgreSQL) |  | MiniLM-L6-v2   |  |   (GPT-3.5-turbo)     |
 +--------------+  +----------------+  +--------------------+
         |
         v
@@ -131,7 +131,7 @@ The experiment logger (`utils/experiment_logger.py`) records dataset version, mo
 | Database ORM | SQLAlchemy (SQLite locally, PostgreSQL/Supabase in production) |
 | Machine Learning | scikit-learn (Ridge, LinearRegression, TF-IDF), pandas, numpy, joblib |
 | NLP and Embeddings | sentence-transformers (MiniLM-L6-v2), NLTK (lemmatizer, negation-aware tokenizer), VADER |
-| LLM | Mistral-7B via OpenRouter |
+| LLM | GPT-3.5-turbo via OpenRouter |
 | Frontend | HTML5, Vanilla CSS, Jinja2, Chart.js, Lucide SVG icons |
 | Deployment | Docker, Hugging Face Spaces |
 

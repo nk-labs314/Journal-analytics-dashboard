@@ -12,7 +12,7 @@ class RAGService:
     def __init__(self, embedding_service):
         self.embedding_service = embedding_service
 
-        # Use HF Inference API with a model strictly supported on the free Serverless Chat endpoint
+        
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=os.getenv("OPENROUTER_API_KEY"),
