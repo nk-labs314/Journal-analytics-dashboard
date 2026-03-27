@@ -19,6 +19,7 @@ from services.lexicon_service import LexiconService
 from services import auth_service
 from services.embedding_service import EmbeddingService
 from services.rag_service import RAGService
+import threading
 
 
 logging.basicConfig(level=logging.INFO)
@@ -435,32 +436,10 @@ def health():
         engine = get_engine()
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        db_status = "ok"
+        return {"status": "ok", "database": "ok"}, 200
     except Exception:
-        return {"status": "db_error"}, 500
-
-    try:
-        embedding_service.embed("health check")
-        embedding_status = "ok"
-    except Exception:
-        embedding_status = "error"
-
-    try:
-        rag_service.client.chat.completions.create(
-            model="openai/gpt-3.5-turbo",
-            messages=[{"role": "user", "content": "ping"}],
-            max_tokens=1
-        )
-        llm_status = "ok"
-    except Exception:
-        llm_status = "error"
-
-    return {
-        "status": "ok",
-        "database": db_status,
-        "embedding_model": embedding_status,
-        "llm_api": llm_status
-    }, 200
+        logger.exception("Health check failed")
+        return {"status": "error", "database": "error"}, 500
 
 
 @main_bp.errorhandler(500)
@@ -473,6 +452,13 @@ def handle_500(error):
 def handle_404(error):
     return {"error": "Resource not found"}, 404
 
+def warm_embedding_model():
+    try:
+        logger.info("Background embedding warmup starting...")
+        embedding_service.embed("warmup")
+        logger.info("Background embedding warmup finished.")
+    except Exception:
+        logger.exception("Background embedding warmup failed")
 
 def create_app(config_class=Config):
     app_instance = Flask(__name__)
@@ -518,10 +504,9 @@ def create_app(config_class=Config):
     with app_instance.app_context():
         try:
             init_db()
-            embedding_service.embed("warmup")
         except Exception:
             logger.exception("Database initialization failed")
-
+    threading.Thread(target=warm_embedding_model, daemon=True).start()
     return app_instance
 
 app = create_app()
