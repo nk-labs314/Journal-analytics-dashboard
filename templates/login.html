@@ -6,7 +6,7 @@
 <div class="auth-container">
     <div class="auth-card">
         <div class="auth-header">
-            <div class="auth-icon">📓</div>
+            <div class="auth-icon"><i data-lucide="book-open" style="width:32px;height:32px;color:var(--primary);"></i></div>
             <h1>{% if mode == "register" %}Create Account{% else %}Welcome Back{% endif %}</h1>
             <p>{% if mode == "register" %}Start tracking your mental health{% else %}Sign in to your dashboard{% endif
                 %}</p>
@@ -15,12 +15,12 @@
         {% with messages = get_flashed_messages() %}
         {% if messages %}
         <div class="flash-message flash-error">
-            ⚠️ {{ messages[0] }}
+            <i data-lucide="alert-triangle" style="width:18px;height:18px;margin-right:8px;flex-shrink:0;"></i> {{ messages[0] }}
         </div>
         {% endif %}
         {% endwith %}
 
-        <form method="POST">
+        <form method="POST" onsubmit="if(typeof showLoader==='function')showLoader();">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="form-group">
             <label>Username</label>
@@ -45,4 +45,5 @@
         </div>
     </div>
 </div>
+<script>if(typeof lucide!=='undefined')lucide.createIcons();</script>
 {% endblock %}

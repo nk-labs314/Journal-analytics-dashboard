@@ -4,9 +4,9 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>📝 Journal Entries</h1>
+    <h1><i data-lucide="book-open" style="width:24px;height:24px;margin-right:8px;vertical-align:middle;"></i> Journal Entries</h1>
     <div class="header-actions">
-        <a href="{{ url_for('main.home') }}" class="btn btn-primary">✨ New Entry</a>
+        <a href="{{ url_for('main.home') }}" class="btn btn-primary"><i data-lucide="plus" style="width:16px;height:16px;margin-right:4px;"></i> New Entry</a>
     </div>
 </div>
 
@@ -14,7 +14,7 @@
 {% for journal in journals %}
 <div class="journal-card">
     <div style="display: flex; align-items: center; justify-content: space-between;">
-        <span class="journal-date">📅 {{ journal.date }}</span>
+        <span class="journal-date"><i data-lucide="calendar" style="width:14px;height:14px;margin-right:4px;"></i> {{ journal.date }}</span>
         <span
             class="journal-mood badge {% if journal.mood_score >= 7 %}badge-success{% elif journal.mood_score >= 4 %}badge-warning{% else %}badge-danger{% endif %}">
             Mood: {{ journal.mood_score }}/10
@@ -26,7 +26,7 @@
 {% else %}
 <div class="card">
     <div class="empty-state">
-        <div class="empty-icon">📝</div>
+        <div class="empty-icon"><i data-lucide="book-open" style="width:48px;height:48px;color:var(--text-muted);"></i></div>
         <h3>No journal entries yet</h3>
         <p>Start by logging your first entry on the Home page.</p>
     </div>

@@ -8,59 +8,65 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head %}{% endblock %}
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 </head>
 <body>
     {% block body_class %}{% endblock %}
+
+    <!-- Global Overlay Loader -->
+    <div id="global-loader" class="overlay-loader" style="display:none;">
+        <div class="spinner"></div>
+    </div>
 
     {% if session.get('user_id') %}
     <div class="app-layout">
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <div class="brand-icon">📓</div>
+                <div class="brand-icon"><i data-lucide="book-open" style="width:24px;height:24px;"></i></div>
                 <span class="brand-name">MoodLens</span>
             </div>
 
             <ul class="sidebar-nav">
                 <li>
                     <a href="{{ url_for('main.home') }}" class="{% if request.endpoint == 'main.home' %}active{% endif %}">
-                        <span class="nav-icon">🏠</span>
+                        <span class="nav-icon"><i data-lucide="home"></i></span>
                         <span class="nav-text">Home</span>
                     </a>
                 </li>
                 <li>
                     <a href="{{ url_for('main.dashboard') }}" class="{% if request.endpoint == 'main.dashboard' %}active{% endif %}">
-                        <span class="nav-icon">📊</span>
+                        <span class="nav-icon"><i data-lucide="bar-chart-2"></i></span>
                         <span class="nav-text">Dashboard</span>
                     </a>
                 </li>
                 <li>
                     <a href="{{ url_for('main.journals') }}" class="{% if request.endpoint == 'main.journals' %}active{% endif %}">
-                        <span class="nav-icon">📝</span>
+                        <span class="nav-icon"><i data-lucide="book-open"></i></span>
                         <span class="nav-text">Journals</span>
                     </a>
                 </li>
                 <li>
                     <a href="{{ url_for('main.forecast') }}" class="{% if request.endpoint == 'main.forecast' %}active{% endif %}">
-                        <span class="nav-icon">🔮</span>
+                        <span class="nav-icon"><i data-lucide="trending-up"></i></span>
                         <span class="nav-text">Forecast</span>
                     </a>
                 </li>
                 <li>
                     <a href="{{ url_for('main.insights') }}" class="{% if request.endpoint == 'main.insights' %}active{% endif %}">
-                        <span class="nav-icon">💡</span>
+                        <span class="nav-icon"><i data-lucide="lightbulb"></i></span>
                         <span class="nav-text">Insights</span>
                     </a>
                 </li>
                 <li>
                     <a href="{{ url_for('main.chat') }}" class="{% if request.endpoint == 'main.chat' %}active{% endif %}">
-                        <span class="nav-icon">💬</span>
+                        <span class="nav-icon"><i data-lucide="message-circle"></i></span>
                         <span class="nav-text">AI Chat</span>
                     </a>
                 </li>
                 <li>
                     <a href="{{ url_for('main.settings') }}" class="{% if request.endpoint == 'main.settings' %}active{% endif %}">
-                        <span class="nav-icon">⚙️</span>
+                        <span class="nav-icon"><i data-lucide="settings"></i></span>
                         <span class="nav-text">Settings</span>
                     </a>
                 </li>
@@ -75,7 +81,8 @@
                     </div>
                 </div>
                 <a href="{{ url_for('main.logout') }}" class="btn btn-ghost" style="width:100%; justify-content:center; margin-top:8px;">
-                    🚪 <span class="nav-text">Logout</span>
+                    <i data-lucide="log-out" style="width:16px;height:16px;margin-right:6px;"></i>
+                    <span class="nav-text">Logout</span>
                 </a>
             </div>
         </aside>
@@ -85,7 +92,7 @@
             {% with messages = get_flashed_messages() %}
                 {% if messages %}
                     <div class="flash-message flash-info">
-                        ✨ {{ messages[0] }}
+                        <i data-lucide="info" style="width:18px;height:18px;margin-right:8px;flex-shrink:0;"></i> {{ messages[0] }}
                     </div>
                 {% endif %}
             {% endwith %}
@@ -98,6 +105,16 @@
     {% endif %}
 
     {% block scripts %}{% endblock %}
+
+    <script>
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        // Global loader helper
+        function showLoader() {
+            var el = document.getElementById('global-loader');
+            if (el) el.style.display = 'flex';
+        }
+    </script>
 </body>
 </html>
-
