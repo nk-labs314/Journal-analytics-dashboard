@@ -160,7 +160,7 @@ def generate_csrf_token():
 
 @main_bp.route('/')
 def home():
-    return render_template("test.html")
+    return render_template("index.html")
 
 
 @main_bp.route("/register", methods=["GET", "POST"])
