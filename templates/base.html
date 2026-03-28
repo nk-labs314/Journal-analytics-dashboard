@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Journal Analytics Dashboard — Track, analyze, and understand your mental health patterns">
+    <meta name="description"
+        content="Journal Analytics Dashboard — Track, analyze, and understand your mental health patterns">
     <title>{% block title %}Journal Analytics{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head %}{% endblock %}
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 </head>
+
 <body>
     {% block body_class %}{% endblock %}
 
@@ -29,43 +32,50 @@
 
             <ul class="sidebar-nav">
                 <li>
-                    <a href="{{ url_for('main.home') }}" class="{% if request.endpoint == 'main.home' %}active{% endif %}">
+                    <a href="{{ url_for('main.home') }}"
+                        class="{% if request.endpoint == 'main.home' %}active{% endif %}">
                         <span class="nav-icon"><i data-lucide="home"></i></span>
                         <span class="nav-text">Home</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ url_for('main.dashboard') }}" class="{% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+                    <a href="{{ url_for('main.dashboard') }}"
+                        class="{% if request.endpoint == 'main.dashboard' %}active{% endif %}">
                         <span class="nav-icon"><i data-lucide="bar-chart-2"></i></span>
                         <span class="nav-text">Dashboard</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ url_for('main.journals') }}" class="{% if request.endpoint == 'main.journals' %}active{% endif %}">
+                    <a href="{{ url_for('main.journals') }}"
+                        class="{% if request.endpoint == 'main.journals' %}active{% endif %}">
                         <span class="nav-icon"><i data-lucide="book-open"></i></span>
                         <span class="nav-text">Journals</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ url_for('main.forecast') }}" class="{% if request.endpoint == 'main.forecast' %}active{% endif %}">
+                    <a href="{{ url_for('main.forecast') }}"
+                        class="{% if request.endpoint == 'main.forecast' %}active{% endif %}">
                         <span class="nav-icon"><i data-lucide="trending-up"></i></span>
                         <span class="nav-text">Forecast</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ url_for('main.insights') }}" class="{% if request.endpoint == 'main.insights' %}active{% endif %}">
+                    <a href="{{ url_for('main.insights') }}"
+                        class="{% if request.endpoint == 'main.insights' %}active{% endif %}">
                         <span class="nav-icon"><i data-lucide="lightbulb"></i></span>
                         <span class="nav-text">Insights</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ url_for('main.chat') }}" class="{% if request.endpoint == 'main.chat' %}active{% endif %}">
+                    <a href="{{ url_for('main.chat') }}"
+                        class="{% if request.endpoint == 'main.chat' %}active{% endif %}">
                         <span class="nav-icon"><i data-lucide="message-circle"></i></span>
                         <span class="nav-text">AI Chat</span>
                     </a>
                 </li>
                 <li>
-                    <a href="{{ url_for('main.settings') }}" class="{% if request.endpoint == 'main.settings' %}active{% endif %}">
+                    <a href="{{ url_for('main.settings') }}"
+                        class="{% if request.endpoint == 'main.settings' %}active{% endif %}">
                         <span class="nav-icon"><i data-lucide="settings"></i></span>
                         <span class="nav-text">Settings</span>
                     </a>
@@ -80,7 +90,8 @@
                         <div class="user-role">Member</div>
                     </div>
                 </div>
-                <a href="{{ url_for('main.logout') }}" class="btn btn-ghost" style="width:100%; justify-content:center; margin-top:8px;">
+                <a href="{{ url_for('main.logout') }}" class="btn btn-ghost"
+                    style="width:100%; justify-content:center; margin-top:8px;">
                     <i data-lucide="log-out" style="width:16px;height:16px;margin-right:6px;"></i>
                     <span class="nav-text">Logout</span>
                 </a>
@@ -90,18 +101,22 @@
         <!-- Main -->
         <main class="main-content">
             {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                    <div class="flash-message flash-info">
-                        <i data-lucide="info" style="width:18px;height:18px;margin-right:8px;flex-shrink:0;"></i> {{ messages[0] }}
-                    </div>
-                {% endif %}
+            {% if messages %}
+            <div class="flash-message flash-info">
+                <i data-lucide="info" style="width:18px;height:18px;margin-right:8px;flex-shrink:0;"></i> {{ messages[0]
+                }}
+            </div>
+            {% endif %}
             {% endwith %}
 
             {% block content %}{% endblock %}
         </main>
     </div>
     {% else %}
-        <h1>NOT LOGGED IN</h1>
+    <div style="padding: 2rem;">
+        <h2>Please log in</h2>
+        <a href="{{ url_for('main.login') }}">Go to Login</a>
+    </div>
     {% endif %}
 
     {% block scripts %}{% endblock %}
@@ -117,4 +132,5 @@
         }
     </script>
 </body>
+
 </html>
