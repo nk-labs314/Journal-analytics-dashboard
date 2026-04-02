@@ -423,6 +423,21 @@ def chat_message():
         return jsonify({"error": "Query is required."}), 400
 
     query = data["query"].strip()
+    DISALLOWED_PATTERNS = [
+    "ignore previous instructions",
+    "reveal system prompt",
+    "show hidden data",
+    "dump context",
+    "print everything",
+    "repeat everything",
+]
+
+    query_lower = query.lower()
+
+    if any(p in query_lower for p in DISALLOWED_PATTERNS):
+        return jsonify({
+            "response": "I can only answer questions about your journal and mood data."
+        })
     if len(query) > 1000:
         return jsonify({"error": "Query too long"}), 413
     user_id = session["user_id"]
@@ -471,6 +486,13 @@ def chat_message():
     response = rag_service.generate(
         query, retrieved, analytics, predictions, history=history
     )
+    if len(response) > 1500:
+        response = response[:1500] + "..."
+    
+    if "mood:" in response.lower() and len(response) > 500:
+        return jsonify({
+            "response": "I can provide insights, not raw data dumps."
+        })
     history.append({"role": "user", "content": query})
     history.append({"role": "assistant", "content": response})
 

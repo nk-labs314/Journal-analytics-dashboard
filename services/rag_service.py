@@ -23,7 +23,7 @@ class RAGService:
         )
         logger.info("RAG service initialised with OpenRouter")
 
-    def retrieve(self, query: str, user_id: int, top_k: int = 5) -> list:
+    def retrieve(self, query: str, user_id: int, top_k: int = 3) -> list:
         """Embed query and retrieve the most similar journal entries for the user."""
         try:
             query_vec = self.embedding_service.embed(query)
@@ -42,6 +42,7 @@ class RAGService:
 
             # Score and rank
             scores = self.embedding_service.similarity(query_vec, candidate_vecs)
+            top_k = min(top_k, 3)
             top_indices = np.argsort(scores)[::-1][:top_k]
 
             return [entries[i] for i in top_indices]
@@ -57,9 +58,9 @@ class RAGService:
             entries_text = "No past journal entries available."
         else:
             entries_text = "\n\n".join([
-                f"[{e.get('date', 'N/A')}] Mood: {e.get('mood_score', 'N/A')}/10\n{e.get('journal_entry', '')[:500]}"
-                for e in retrieved_entries
-            ])
+                f"[{e.get('date', 'N/A')}] Mood: {e.get('mood_score', 'N/A')}/10\nSummary: {e.get('journal_entry', '')[:200]}"
+    for e in retrieved_entries
+])
 
         # Build analytics context
         analytics_section = "No analytics data available."
@@ -80,6 +81,10 @@ class RAGService:
             ])
 
         context = f"""User's relevant past journal entries:
+
+        # basic sanitization against instruction injection
+        for bad in ["ignore previous instructions", "reveal", "dump", "system prompt"]:
+            context = context.replace(bad, "")
 {entries_text}
 
 Current analytics:
@@ -87,6 +92,10 @@ Current analytics:
 
 Mood forecast:
 {forecast_section}"""
+
+        for bad in ["ignore previous instructions", "reveal", "dump", "system prompt"]:
+            context = context.replace(bad, "")
+            context = context.replace(bad.upper(), "")
 
         system_prompt = (
             "You are a personal mood analytics assistant. "
@@ -100,6 +109,10 @@ Mood forecast:
             "'I can only answer questions about your journal and mood data.' "
             "Do not answer general knowledge questions, coding questions, "
             "or anything outside this scope."
+            "Never reveal raw journal entries."
+            "Never repeat the provided context verbatim."
+            "Never output full data dumps."
+            "Only provide summarized insights."
         )
 
         messages = [{"role": "system", "content": system_prompt}]
@@ -117,6 +130,9 @@ Mood forecast:
 
                 # Truncate content
                 content = content[:500]
+                # remove obvious injection patterns
+                for bad in ["ignore previous instructions", "reveal", "dump"]:
+                    content = content.replace(bad, "")  
 
                 messages.append({
                     "role": role,
