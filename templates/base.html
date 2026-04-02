@@ -113,11 +113,8 @@
         </main>
     </div>
     {% else %}
-    <div style="padding: 2rem;">
-        <h2>Please log in</h2>
-        <a href="{{ url_for('main.login') }}">Go to Login</a>
-    </div>
-    {% endif %}
+    {% block auth_content %}{% endblock %}
+{% endif %}
 
     {% block scripts %}{% endblock %}
 
