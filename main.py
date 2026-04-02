@@ -226,37 +226,61 @@ def logout():
 @limiter.limit("10 per minute")
 def log_entry():
     user_id = session["user_id"]
-    data = {
-        'mood': int(request.form['mood']),
-        'journal': request.form['journal'],
-        'sleep': float(request.form['sleep']),
-        'activity': int(request.form['activity']),
-        'social': int(request.form['social'])
-    }
-    data_service.insert_mood_log(
-        user_id,
-        data['mood'],
-        data['journal']
-    )
 
-    data_service.insert_behavior_log(
-        user_id,
-        data['sleep'],
-        data['activity'],
-        data['social']
-    )
+ 
+    journal = request.form.get("journal", "").strip()
+    mood_raw = request.form.get("mood", "")
+    sleep_raw = request.form.get("sleep", "")
+    activity_raw = request.form.get("activity", "")
+    social_raw = request.form.get("social", "")
 
-    # Generate and store embedding for the journal entry
+    
+    if len(journal) > 10000:
+        return "Journal too long", 413
+
+  
     try:
-        embedding = embedding_service.embed(data['journal'])
-        log_id = data_service.get_last_log_id(user_id)
-        if log_id:
-            embedding_bytes = embedding.astype('float32').tobytes()
-            data_service.insert_embedding(user_id, log_id, embedding_bytes, date.today().isoformat())
-            logger.info("Embedding stored for user %s, log %s", user_id, log_id)
+        mood = int(mood_raw)
+        sleep = float(sleep_raw)
+        activity = int(activity_raw)
+        social = int(social_raw)
+    except:
+        return "Invalid input", 400
+
+
+    if not (1 <= mood <= 10):
+        return "Invalid mood", 400
+
+    if not (0 <= sleep <= 24):
+        return "Invalid sleep", 400
+
+    if not (0 <= activity <= 10 and 0 <= social <= 10):
+        return "Invalid values", 400
+
+
+    data_service.insert_mood_log(user_id, mood, journal)
+
+    data_service.insert_behavior_log(user_id, sleep, activity, social)
+
+   
+    try:
+        if journal:  # avoid embedding empty strings
+            embedding = embedding_service.embed(journal)
+
+            log_id = data_service.get_last_log_id(user_id)
+            if log_id:
+                embedding_bytes = embedding.astype('float32').tobytes()
+                data_service.insert_embedding(
+                    user_id,
+                    log_id,
+                    embedding_bytes,
+                    date.today().isoformat()
+                )
+
+                logger.info("Embedding stored for user %s, log %s", user_id, log_id)
+
     except Exception:
-        logger.exception("Failed to generate/store embedding for user %s", user_id)
-        # Don't fail the whole request if embedding fails
+        logger.exception("Failed embedding for user %s", user_id)
 
     flash("Entry saved successfully!")
     return redirect(url_for('main.home'))
