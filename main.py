@@ -399,8 +399,13 @@ def chat_message():
         return jsonify({"error": "Query is required."}), 400
 
     query = data["query"].strip()
-    history = data.get("history", [])
+    if len(query) > 1000:
+        return jsonify({"error": "Query too long"}), 413
     user_id = session["user_id"]
+    if "chat_history" not in session:
+        session["chat_history"] = []
+
+    history = session["chat_history"]
 
     # Retrieve similar entries
     retrieved = rag_service.retrieve(query, user_id)
@@ -439,7 +444,14 @@ def chat_message():
         logger.exception("Failed to get forecast for chat context")
         predictions = {}
 
-    response = rag_service.generate(query, retrieved, analytics, predictions, history=history)
+    response = rag_service.generate(
+        query, retrieved, analytics, predictions, history=history
+    )
+    history.append({"role": "user", "content": query})
+    history.append({"role": "assistant", "content": response})
+
+    MAX_HISTORY = 10
+    session["chat_history"] = history[-MAX_HISTORY:]
 
     return jsonify({"response": response})
 

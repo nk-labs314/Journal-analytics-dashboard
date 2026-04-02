@@ -37,7 +37,7 @@
     const emptyState = document.getElementById('emptyState');
 
     // Conversation history for multi-turn context
-    const chatHistory = [];
+
 
     function scrollToBottom() {
         messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -143,7 +143,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                body: JSON.stringify({ query: query, history: chatHistory })
+                body: JSON.stringify({ query: query})
             });
 
             const data = await resp.json();
@@ -155,8 +155,7 @@
             }
 
             // Update history
-            chatHistory.push({ role: 'user', content: query });
-            chatHistory.push({ role: 'assistant', content: data.response });
+        
 
             setLoading(false);
             appendMessage('assistant', data.response);

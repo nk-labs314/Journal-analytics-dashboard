@@ -11,11 +11,15 @@ class RAGService:
 
     def __init__(self, embedding_service):
         self.embedding_service = embedding_service
+        api_key=os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENROUTER_API_KEY not set")
 
         
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
-            api_key=os.getenv("OPENROUTER_API_KEY"),
+            api_key=api_key,
+            
         )
         logger.info("RAG service initialised with OpenRouter")
 
@@ -53,7 +57,7 @@ class RAGService:
             entries_text = "No past journal entries available."
         else:
             entries_text = "\n\n".join([
-                f"[{e.get('date', 'N/A')}] Mood: {e.get('mood_score', 'N/A')}/10\n{e.get('journal_entry', '')}"
+                f"[{e.get('date', 'N/A')}] Mood: {e.get('mood_score', 'N/A')}/10\n{e.get('journal_entry', '')[:500]}"
                 for e in retrieved_entries
             ])
 
@@ -101,16 +105,39 @@ Mood forecast:
         messages = [{"role": "system", "content": system_prompt}]
 
         # Add conversation history for multi-turn context
+        # Safe history handling
         if history:
-            messages.extend(history)
+            for msg in history:
+                role = msg.get("role")
+                content = msg.get("content", "")
 
-        messages.append({"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"})
+                # Only allow safe roles
+                if role not in ("user", "assistant"):
+                    continue
+
+                # Truncate content
+                content = content[:500]
+
+                messages.append({
+                    "role": role,
+            "content": content
+        })
+        messages.append({
+            "role": "system",
+            "content": f"Use the following data to answer:\n\n{context}"
+        })
+
+        # Add user query separately
+        messages.append({
+            "role": "user",
+            "content": query
+        })
 
         try:
             response = self.client.chat.completions.create(
                 model="openai/gpt-3.5-turbo",
                 messages=messages,
-                temperature=0.7,
+                temperature=0.3,
                 max_tokens=500,
             )
             return response.choices[0].message.content.strip()
