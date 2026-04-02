@@ -90,11 +90,14 @@
                         <div class="user-role">Member</div>
                     </div>
                 </div>
-                <a href="{{ url_for('main.logout') }}" class="btn btn-ghost"
-                    style="width:100%; justify-content:center; margin-top:8px;">
-                    <i data-lucide="log-out" style="width:16px;height:16px;margin-right:6px;"></i>
-                    <span class="nav-text">Logout</span>
-                </a>
+                <form method="POST" action="{{ url_for('main.logout') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-ghost"
+                        style="width:100%; justify-content:center; margin-top:8px;">
+                        <i data-lucide="log-out" style="width:16px;height:16px;margin-right:6px;"></i>
+                        <span class="nav-text">Logout</span>
+                    </button>
+                </form>
             </div>
         </aside>
 

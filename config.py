@@ -22,6 +22,12 @@ class Config:
     HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "")
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 
+    ENV = os.getenv("ENV", "development")
+
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SECURE = ENV == "production"
+
 
 class TestingConfig(Config):
     TESTING = True

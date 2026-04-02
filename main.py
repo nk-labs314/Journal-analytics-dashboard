@@ -133,7 +133,7 @@ def auth_and_csrf_checks():
     session.modified = True
 
     # CSRF Protection
-    if request.method == "POST":
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
         token = session.get("_csrf_token")
         if not token or (token != request.form.get("csrf_token") and token != request.headers.get("X-CSRFToken")):
             abort(403)
@@ -179,7 +179,7 @@ def register():
         if error:
             flash(error)
             return redirect(url_for("main.register"))
-
+        session.clear()
         session["user_id"] = user_id
         session["username"] = username
         session["auth_hash"] = auth_hash
@@ -204,7 +204,7 @@ def login():
         if error:
             flash(error)
             return redirect(url_for("main.login"))
-
+        session.clear()
         session["user_id"] = user_id
         session["username"] = username
         session["auth_hash"] = auth_hash
@@ -215,7 +215,7 @@ def login():
     return render_template("login.html", mode="login")
 
 
-@main_bp.route("/logout")
+@main_bp.route("/logout", methods=["POST"])
 def logout():
     session.clear()
     flash("Logged out.")
