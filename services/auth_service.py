@@ -9,6 +9,11 @@ logger = logging.getLogger(__name__)
 
 DEMO_USERNAME = "demo_acc"
 
+def is_demo_user_by_id(user_id):
+    query = text("SELECT username FROM AuthUsers WHERE user_id = :user_id")
+    with get_engine().connect() as conn:
+        row = conn.execute(query, {"user_id": user_id}).fetchone()
+    return row and row.username == DEMO_USERNAME
 
 def create_user(username, password):
     engine = get_engine()

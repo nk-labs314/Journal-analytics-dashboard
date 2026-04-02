@@ -20,6 +20,7 @@ from services import auth_service
 from services.embedding_service import EmbeddingService
 from services.rag_service import RAGService
 import threading
+from services.auth_service import is_demo_user_by_id
 
 
 logging.basicConfig(level=logging.INFO)
@@ -341,6 +342,13 @@ def chat():
 def settings():
     if request.method == "POST":
         action = request.form.get("action")
+
+        user_id = session["user_id"]
+
+        if is_demo_user_by_id(user_id):
+            if action in ["change_password", "delete_account"]:
+                flash("Demo account: this action is disabled.")
+                return redirect(url_for("main.settings"))
 
         if action == "change_password":
             old_pw = request.form.get("old_password", "")

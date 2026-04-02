@@ -24,21 +24,35 @@
         {% endif %}
         {% endwith %}
 
-        <form method="POST" action="{{ url_for('main.settings') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <input type="hidden" name="action" value="change_password"/>
-            
-            <div class="form-group">
-                <label>Old Password</label>
-                <input type="password" name="old_password" class="form-control" required>
-            </div>
-            <div class="form-group">
-                <label>New Password</label>
-                <input type="password" name="new_password" class="form-control" required>
-            </div>
-            
-            <button type="submit" class="btn btn-primary">Update Password</button>
-        </form>
+        {% if session.username == "demo_acc" %}
+
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                Demo account: password changes are disabled.
+            </p>
+
+            <button class="btn btn-primary" disabled>
+                Update Password
+            </button>
+
+        {% else %}
+
+            <form method="POST" action="{{ url_for('main.settings') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="action" value="change_password"/>
+                
+                <div class="form-group">
+                    <label>Old Password</label>
+                    <input type="password" name="old_password" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" name="new_password" class="form-control" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Update Password</button>
+            </form>
+
+{% endif %}
     </div>
 
     <!-- Delete Account -->
@@ -50,19 +64,31 @@
             Warning: This action is irreversible. All of your journal entries, behavior data, and history will be permanently erased.
         </p>
 
-        <form method="POST" action="{{ url_for('main.settings') }}" onsubmit="return confirm('Are you sure? This absolutely cannot be undone.');">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <input type="hidden" name="action" value="delete_account"/>
-            
-            <div class="form-group">
-                <label>Confirm Password to Delete</label>
-                <input type="password" name="password" class="form-control" placeholder="Enter your password to confirm" required>
-            </div>
-            
-            <button type="submit" class="btn" style="background: var(--danger); color: white;">
+        {% if session.username == "demo_acc" %}
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                Demo account: account deletion is disabled.
+            </p>
+
+            <button class="btn" style="background: var(--danger); color: white;" disabled>
                 Permanently Delete Account
             </button>
-        </form>
+
+        {% else %}
+            <form method="POST" action="{{ url_for('main.settings') }}" onsubmit="return confirm('Are you sure? This absolutely cannot be undone.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="action" value="delete_account"/>
+                
+                <div class="form-group">
+                    <label>Confirm Password to Delete</label>
+                    <input type="password" name="password" class="form-control" placeholder="Enter your password to confirm" required>
+                </div>
+                
+                <button type="submit" class="btn" style="background: var(--danger); color: white;">
+                    Permanently Delete Account
+                </button>
+            </form>
+
+{% endif %}
     </div>
 </div>
 {% endblock %}
