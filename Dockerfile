@@ -23,7 +23,8 @@ COPY services/ ./services/
 COPY templates/ ./templates/
 COPY static/ ./static/
 COPY artifacts/ ./artifacts/
+COPY models/ ./models/
 
 EXPOSE 7860
 
-CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:7860", "main:app"]
+CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:7860", "main:app"]
