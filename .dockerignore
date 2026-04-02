@@ -1,0 +1,38 @@
+# secrets
+.env
+
+# git
+.git
+.gitignore
+.gitattributes
+
+# python
+__pycache__/
+*.pyc
+
+# local db
+*.db
+*.db-wal
+*.db-shm
+
+# datasets / experiments
+data/
+dataset_generation/
+training/
+evaluation/
+*.csv
+experiments_log.csv
+
+# scripts
+scripts/
+generate_demo_data.py
+
+# dev junk
+.vscode/
+.idea/
+*.log
+*.tmp
+*.zip
+
+# runtime junk
+__pycache__/
