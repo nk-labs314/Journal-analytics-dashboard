@@ -3,6 +3,9 @@ import joblib
 import pandas as pd
 import logging
 from models.feature_builder import build_features
+import hashlib 
+
+
 
 logger = logging.getLogger(__name__)
 ARTIFACT_PATH = os.path.join("artifacts", "ridge_multi_output.pkl")
@@ -17,9 +20,23 @@ class ForecastService:
         self.lexicon = None
         self.load_model()
 
+    def _verify(self, path, expected_hash):
+        if not expected_hash:
+            raise RuntimeError("Model hash not set")
+
+        import hashlib
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+
+        if h.hexdigest() != expected_hash:
+            raise RuntimeError(f"Model tampered: {path}")
+
     def load_model(self):
         if not os.path.exists(ARTIFACT_PATH):
             raise FileNotFoundError("Forecast model artifact not found.")
+        self._verify(ARTIFACT_PATH, os.getenv("MODEL_SHA256_FORECAST"))
         artifact = joblib.load(ARTIFACT_PATH)
         self.model = artifact["model"]
         self.feature_columns = artifact["feature_columns"]

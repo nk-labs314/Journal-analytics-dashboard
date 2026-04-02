@@ -2,7 +2,10 @@ import os
 import joblib
 from models.lexicon_model import build_user_lexicon, predict_mood_from_text
 import logging
+import hashlib
 
+FORECAST_HASH = os.getenv("MODEL_SHA256_FORECAST")
+LEXICON_HASH = os.getenv("MODEL_SHA256_LEXICON")
 logger = logging.getLogger(__name__)
 
 FORECAST_ARTIFACT_PATH = os.path.join("artifacts", "ridge_multi_output.pkl")
@@ -10,25 +13,41 @@ LEXICON_ARTIFACT_PATH = os.path.join("artifacts", "global_lexicon.pkl")
 
 
 class LexiconService:
+    def _verify(self, path, expected_hash):
+        if not expected_hash:
+            raise RuntimeError("Model hash not set")
+
+        import hashlib
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+
+        if h.hexdigest() != expected_hash:
+            raise RuntimeError(f"Model tampered: {path}")
 
     def __init__(self):
-        # Try loading from forecast artifact first (single source of truth)
+    # Try forecast artifact first
         if os.path.exists(FORECAST_ARTIFACT_PATH):
+            self._verify(FORECAST_ARTIFACT_PATH, FORECAST_HASH)
             artifact = joblib.load(FORECAST_ARTIFACT_PATH)
+
             if "global_lexicon" in artifact:
                 self.global_lexicon = artifact["global_lexicon"]
                 self.global_counts = artifact["global_counts"]
                 self.global_mean = artifact["global_mean"]
-                logger.info("Lexicon loaded from forecast artifact (single source of truth)")
+                logger.info("Lexicon loaded from forecast artifact")
                 return
 
-        # Fallback to standalone lexicon artifact
+        # Fallback to standalone lexicon
         if os.path.exists(LEXICON_ARTIFACT_PATH):
+            self._verify(LEXICON_ARTIFACT_PATH, LEXICON_HASH)
             artifact = joblib.load(LEXICON_ARTIFACT_PATH)
+
             self.global_lexicon = artifact["global_lexicon"]
             self.global_counts = artifact["global_counts"]
             self.global_mean = artifact["global_mean"]
-            logger.warning("Lexicon loaded from standalone artifact (fallback)")
+            logger.warning("Lexicon loaded from standalone artifact")
             return
 
         raise FileNotFoundError("No lexicon artifact found")
