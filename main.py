@@ -139,9 +139,6 @@ def auth_and_csrf_checks():
         form_token = request.form.get("csrf_token")
         header_token = request.headers.get("X-CSRFToken")
 
-        print("SESSION:", token)
-        print("FORM:", form_token)
-        print("HEADER:", header_token)
 
         if not token or (token != form_token and token != header_token):
             print("CSRF FAILED")
