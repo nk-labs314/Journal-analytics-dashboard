@@ -4,6 +4,11 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 from services.data_service import get_engine
 from services.demo_service import reset_demo_account
+import time
+
+LOGIN_ATTEMPTS = {}
+MAX_ATTEMPTS = 5
+BLOCK_TIME = 60  # seconds
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +128,16 @@ def login_user(username, password):
     if not username or not password:
         return None, None, "Username and password are required."
 
+    username = username.strip().lower()
+    key = username
+    now = time.time()
+    attempts = LOGIN_ATTEMPTS.get(key, [])
+    # Remove old attempts
+    attempts = [t for t in attempts if now - t < BLOCK_TIME]
+
+    if len(attempts) >= MAX_ATTEMPTS:
+        return None, None, "Too many attempts. Try again later."
+
     try:
         result = verify_user(username, password)
     except Exception as e:
@@ -130,9 +145,12 @@ def login_user(username, password):
         return None, None, "Login failed. Please try again in a moment."
 
     if result is None:
+        attempts.append(now)
+        LOGIN_ATTEMPTS[key] = attempts
         return None, None, "Invalid username or password."
 
     user_id, auth_hash = result
+    LOGIN_ATTEMPTS.pop(key, None)
 
     if username == DEMO_USERNAME:
         try:
@@ -159,7 +177,7 @@ def register_user(username, password):
         return None, None, "Registration failed. Please try again in a moment."
 
     if not created:
-        return None, None, "Username already exists."
+        return None, None, " Registration Failed."
 
     result = verify_user(username, password)
     if result is None:
