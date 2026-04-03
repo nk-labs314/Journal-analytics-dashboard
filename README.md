@@ -23,34 +23,64 @@ You write a journal entry. The system scores it with a personalized Bayesian lex
 
 ---
 
-## Architecture
+## System Architecture
 
-```
+```text
+
                 +----------------------+
                 |      Frontend        |
-                |  (Jinja2 Templates)  |
+                | (Jinja + Chart.js)   |
                 +----------+-----------+
                            |
                            v
                 +----------------------+
                 |    Flask Backend     |
-                |  (App Factory)       |
+                | (Routes + Validation)|
                 +----------+-----------+
                            |
         +------------------+-------------------+
+        |                  |                   |
         v                  v                   v
-+--------------+  +----------------+  +--------------------+
-|  Supabase DB |  | Embedding Model|  |   OpenRouter LLM   |
-| (PostgreSQL) |  | MiniLM-L6-v2   |  |   (GPT-3.5-turbo)     |
-+--------------+  +----------------+  +--------------------+
-        |
-        v
-+----------------------+
-| Stored Embeddings    |
-| + Journal Entries    |
-+----------------------+
-```
 
++----------------+  +----------------+  +----------------------+
+|  Data Service  |  | Analytics Svc  |  |   Forecast Service   |
+| (SQLAlchemy)   |  | (Trends, Corr) |  |   (Ridge Model)      |
++--------+-------+  +--------+-------+  +----------+-----------+
+         |                   |                      |
+         v                   v                      v
++-----------------------------------------------------------+
+|                       Database                            |
+| MoodLogs | BehaviorData | EntryEmbeddings | AuthUsers     |
++-----------------------------------------------------------+
+
+                           |
+                           v
+                +----------------------+
+                |  Embedding Service   |
+                | (MiniLM-L6-v2)       |
+                +----------+-----------+
+                           |
+                           v
+                +----------------------+
+                |     RAG Service      |
+                | Retrieval + Context  |
+                +----------+-----------+
+                           |
+                           v
+                +----------------------+
+                |   OpenRouter LLM     |
+                |   (GPT-3.5-turbo)    |
+                +----------------------+
+```
+RAG Flow:
+
+Query
+ → Embedding
+ → Similarity Search (EntryEmbeddings)
+ → Top-K Retrieval
+ → + Analytics + Forecast
+ → LLM Response
+```
 ---
 
 ## ML Components
