@@ -21,6 +21,7 @@ from services.embedding_service import EmbeddingService
 from services.rag_service import RAGService
 import threading
 from services.auth_service import is_demo_user_by_id
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 
 logging.basicConfig(level=logging.INFO)
@@ -530,6 +531,7 @@ def warm_embedding_model():
 
 def create_app(config_class=Config):
     base_dir = os.path.dirname(os.path.abspath(__file__))
+    app_instance.wsgi_app = ProxyFix(app_instance.wsgi_app, x_proto=1, x_host=1)
 
     app_instance = Flask(
         __name__,
@@ -537,11 +539,6 @@ def create_app(config_class=Config):
         static_folder=os.path.join(base_dir, "static"),
     )
     app_instance.config.from_object(config_class)
-    app_instance.config.update(
-        SESSION_COOKIE_SAMESITE="LAX",
-        SESSION_COOKIE_SECURE=False,
-        SESSION_COOKIE_HTTPONLY=True
-    )
     app_instance.secret_key = app_instance.config["SECRET_KEY"]
 
     logging.basicConfig(
