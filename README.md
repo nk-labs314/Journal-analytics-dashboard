@@ -12,7 +12,8 @@ pinned: false
 
 A personal analytics platform that applies NLP, time-series regression, and retrieval-augmented generation to journal entries — turning freeform text into mood forecasts and grounded AI insights.
 
-Open in new tab for full functionality (embedded preview may block cookies)
+*Important:** Open in a normal browser tab.  
+The embedded preview (especially in incognito/private mode) may not work due to browser cookie restrictions.
 
 **Live demo:** https://huggingface.co/spaces/MetHJ/journal-analytics-dashboard  
 **Source:** https://github.com/nk-labs314/Journal-analytics-dashboard
