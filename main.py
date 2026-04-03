@@ -135,7 +135,15 @@ def auth_and_csrf_checks():
     # CSRF Protection
     if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
         token = session.get("_csrf_token")
-        if not token or (token != request.form.get("csrf_token") and token != request.headers.get("X-CSRFToken")):
+        form_token = request.form.get("csrf_token")
+        header_token = request.headers.get("X-CSRFToken")
+
+        print("SESSION:", token)
+        print("FORM:", form_token)
+        print("HEADER:", header_token)
+
+        if not token or (token != form_token and token != header_token):
+            print("CSRF FAILED")
             abort(403)
 
     # Global active session invalidation (auth_hash matching)
@@ -180,7 +188,6 @@ def register():
             flash(error)
             return redirect(url_for("main.register"))
         session.clear()
-        session.modified = True
         session["user_id"] = user_id
         session["username"] = username
         session["auth_hash"] = auth_hash
