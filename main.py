@@ -532,7 +532,7 @@ def create_app(config_class=Config):
     app_instance.config.from_object(config_class)
     app_instance.config.update(
         SESSION_COOKIE_SAMESITE="LAX",
-        SESSION_COOKIE_SECURE=True,
+        SESSION_COOKIE_SECURE=False,
         SESSION_COOKIE_HTTPONLY=True
     )
     app_instance.secret_key = app_instance.config["SECRET_KEY"]
