@@ -531,7 +531,7 @@ def warm_embedding_model():
 
 def create_app(config_class=Config):
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    app_instance.wsgi_app = ProxyFix(app_instance.wsgi_app, x_proto=1, x_host=1)
+   
 
     app_instance = Flask(
         __name__,
@@ -540,6 +540,7 @@ def create_app(config_class=Config):
     )
     app_instance.config.from_object(config_class)
     app_instance.secret_key = app_instance.config["SECRET_KEY"]
+    app_instance.wsgi_app = ProxyFix(app_instance.wsgi_app, x_proto=1, x_host=1)
 
     logging.basicConfig(
         format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
