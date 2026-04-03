@@ -916,4 +916,18 @@ tr:hover td {
     .grid-2 {
         grid-template-columns: 1fr;
     }
+    /* ---- Mobile Logout ---- */
+    .mobile-logout {
+        display: none;
+    }
+
+    @media (max-width: 768px) {
+        .mobile-logout {
+            display: block;
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 200;
+        }
+    }
 }
