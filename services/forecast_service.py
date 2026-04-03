@@ -29,11 +29,7 @@ class ForecastService:
         with open(path, "rb") as f:
             for chunk in iter(lambda: f.read(8192), b""):
                 h.update(chunk)
-        print("EXPECTED:", repr(expected_hash))
-        print("ACTUAL:  ", repr(h.hexdigest()))
-        print("LEN EXP:", len(expected_hash))
-        print("LEN ACT:", len(h.hexdigest()))
-        
+                
         if h.hexdigest() != expected_hash:
             raise RuntimeError(f"Model tampered: {path}")
 

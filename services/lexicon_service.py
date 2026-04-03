@@ -16,7 +16,7 @@ class LexiconService:
     def _verify(self, path, expected_hash):
         if not expected_hash:
             raise RuntimeError("Model hash not set")
-
+        expected_hash =expected_hash.strip()
         import hashlib
         h = hashlib.sha256()
         with open(path, "rb") as f:
@@ -29,7 +29,7 @@ class LexiconService:
     def __init__(self):
     # Try forecast artifact first
         if os.path.exists(FORECAST_ARTIFACT_PATH):
-            self._verify(FORECAST_ARTIFACT_PATH, FORECAST_HASH)
+            self._verify(FORECAST_ARTIFACT_PATH, os.getenv("MODEL_SHA256_FORECAST"))
             artifact = joblib.load(FORECAST_ARTIFACT_PATH)
 
             if "global_lexicon" in artifact:
@@ -41,7 +41,7 @@ class LexiconService:
 
         # Fallback to standalone lexicon
         if os.path.exists(LEXICON_ARTIFACT_PATH):
-            self._verify(LEXICON_ARTIFACT_PATH, LEXICON_HASH)
+            self._verify(LEXICON_ARTIFACT_PATH,os.getenv("MODEL_SHA256_LEXICON"))
             artifact = joblib.load(LEXICON_ARTIFACT_PATH)
 
             self.global_lexicon = artifact["global_lexicon"]
