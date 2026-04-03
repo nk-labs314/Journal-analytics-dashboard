@@ -1,4 +1,5 @@
 import logging
+import hashlib
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -11,7 +12,8 @@ MAX_ATTEMPTS = 5
 BLOCK_TIME = 60  # seconds
 
 logger = logging.getLogger(__name__)
-
+def auth_fingerprint(password_hash: str) -> str:
+    return hashlib.sha256(password_hash.encode("utf-8")).hexdigest()
 DEMO_USERNAME = "demo_acc"
 
 def is_demo_user_by_id(user_id):
@@ -62,14 +64,14 @@ def verify_user(username, password):
         return None
 
     # Return (user_id, shortened hash string for session invalidation)
-    return int(row.user_id), row.password_hash[:10]
+    return int(row.user_id), auth_fingerprint(row.password_hash)
 
 
 def get_user_auth(user_id):
     query = text("SELECT password_hash FROM AuthUsers WHERE user_id = :user_id")
     with get_engine().connect() as conn:
         row = conn.execute(query, {"user_id": user_id}).fetchone()
-    return row.password_hash[:10] if row else None
+    return auth_fingerprint(row.password_hash) if row else None
 
 
 def change_password(user_id, old_password, new_password):
@@ -89,7 +91,7 @@ def change_password(user_id, old_password, new_password):
     try:
         with engine.begin() as conn:
             conn.execute(update_query, {"new_hash": new_hash, "user_id": user_id})
-        return True, new_hash[:10]
+        return True, auth_fingerprint(new_hash)
     except Exception:
         logger.exception("Failed to change password")
         return False, "Database error."
