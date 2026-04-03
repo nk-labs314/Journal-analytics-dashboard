@@ -28,6 +28,8 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SECURE = ENV == "production"
 
+    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "").split(",")
+
 
 class TestingConfig(Config):
     TESTING = True

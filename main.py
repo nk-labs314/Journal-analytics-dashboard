@@ -180,6 +180,7 @@ def register():
             flash(error)
             return redirect(url_for("main.register"))
         session.clear()
+        session.modified = True
         session["user_id"] = user_id
         session["username"] = username
         session["auth_hash"] = auth_hash
@@ -205,6 +206,7 @@ def login():
             flash(error)
             return redirect(url_for("main.login"))
         session.clear()
+        session.modified = True
         session["user_id"] = user_id
         session["username"] = username
         session["auth_hash"] = auth_hash
@@ -441,10 +443,9 @@ def chat_message():
     if len(query) > 1000:
         return jsonify({"error": "Query too long"}), 413
     user_id = session["user_id"]
-    if "chat_history" not in session:
-        session["chat_history"] = []
-
-    history = session["chat_history"]
+    history = data.get("history", [])
+    if not isinstance(history, list):
+        history = []
 
     # Retrieve similar entries
     retrieved = rag_service.retrieve(query, user_id)
@@ -484,20 +485,8 @@ def chat_message():
         predictions = {}
 
     response = rag_service.generate(
-        query, retrieved, analytics, predictions, history=history
+        query, retrieved, analytics, predictions, history=history[-10:]
     )
-    if len(response) > 1500:
-        response = response[:1500] + "..."
-    
-    if "mood:" in response.lower() and len(response) > 500:
-        return jsonify({
-            "response": "I can provide insights, not raw data dumps."
-        })
-    history.append({"role": "user", "content": query})
-    history.append({"role": "assistant", "content": response})
-
-    MAX_HISTORY = 10
-    session["chat_history"] = history[-MAX_HISTORY:]
 
     return jsonify({"response": response})
 
@@ -542,8 +531,9 @@ def create_app(config_class=Config):
     )
     app_instance.config.from_object(config_class)
     app_instance.config.update(
-        SESSION_COOKIE_SAMESITE="None",
-        SESSION_COOKIE_SECURE=True
+        SESSION_COOKIE_SAMESITE="LAX",
+        SESSION_COOKIE_SECURE=True,
+        SESSION_COOKIE_HTTPONLY=True
     )
     app_instance.secret_key = app_instance.config["SECRET_KEY"]
 
@@ -569,11 +559,14 @@ def create_app(config_class=Config):
     # CORS headers
     @app_instance.after_request
     def add_cors_headers(response):
-        allowed = app_instance.config.get("CORS_ORIGINS", "*")
-        response.headers["Access-Control-Allow-Origin"] = allowed
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-CSRFToken"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
+        allowed = app_instance.config.get("CORS_ORIGINS")
+
+        if allowed:
+            response.headers["Access-Control-Allow-Origin"] = allowed
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-CSRFToken"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+
         return response
 
     app_instance.register_blueprint(main_bp)
