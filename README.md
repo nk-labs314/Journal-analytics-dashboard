@@ -12,9 +12,18 @@ pinned: false
 
 A personal analytics platform that applies NLP, time-series regression, and retrieval-augmented generation to journal entries — turning freeform text into mood forecasts and grounded AI insights.
 
+*Important:** Open in a normal browser tab.  
+The embedded preview (especially in incognito/private mode) may not work due to browser cookie restrictions.
+
 **Live demo:** https://huggingface.co/spaces/MetHJ/journal-analytics-dashboard  
 **Source:** https://github.com/nk-labs314/Journal-analytics-dashboard
 
+**!!Note on HuggingFace Spaces Preview**
+
+The app may not function correctly in the embedded preview (especially in incognito/private mode) due to browser restrictions on third-party cookies.
+This project uses session-based authentication with CSRF protection, which relies on cookies. Some browsers block these cookies in cross-site iframe contexts.
+
+To use the app reliably, open the Space in a new tab.
 ---
 
 ## What it does
