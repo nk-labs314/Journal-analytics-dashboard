@@ -24,7 +24,7 @@ class Config:
 
     ENV = os.getenv("ENV", "development")
 
-    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SAMESITE = "None"
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SECURE = True
 
