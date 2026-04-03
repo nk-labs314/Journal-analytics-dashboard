@@ -24,7 +24,7 @@ class ForecastService:
         if not expected_hash:
             raise RuntimeError("Model hash not set")
 
-        import hashlib
+        expected_hash = expected_hash.strip()
         h = hashlib.sha256()
         with open(path, "rb") as f:
             for chunk in iter(lambda: f.read(8192), b""):
