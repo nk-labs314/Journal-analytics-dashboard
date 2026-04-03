@@ -72,6 +72,7 @@ You write a journal entry. The system scores it with a personalized Bayesian lex
                 |   (GPT-3.5-turbo)    |
                 +----------------------+
 ```
+```
 RAG Flow:
 
 Query
@@ -80,7 +81,7 @@ Query
  → Top-K Retrieval
  → + Analytics + Forecast
  → LLM Response
-```
+ ```
 ---
 
 ## ML Components
