@@ -27,7 +27,6 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 def init_db():
     engine = get_engine()
     auth_users_sql = """
@@ -582,6 +581,12 @@ def create_app(config_class=Config):
     return app_instance
 
 app = create_app()
+
+
+@app.route('/healthz')
+def health_check():
+    return 'OK', 200
+
 
 if __name__ == '__main__':
     app.run(debug=app.config["DEBUG"])
